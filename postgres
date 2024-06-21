@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Parse arguments
+help=0
+hard=0
+
+while [ "$cmdargs" != "0" ]; do
+    arg=$1
+    shift
+    cmdargs=$#
+    if [ "$arg" = "-h" ]; then
+        help=1
+    elif [ "$arg" = "-help" ]; then
+        help=1
+    elif [ "$arg" = "-hard" ]; then
+        hard=1
+    fi
+done
+
+if [ $help = "1" ]; then
+    echo "usage: `basename $0` [<options>]"
+    echo "where <options> can be:"
+    echo "  -h               get this help message"
+    echo "  -hard            do a hard start. This completely removes the old database and creates a new one."
+    echo ""
+    exit 2
+fi
+
+# Setup variables
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+mysql_data_dir=$SCRIPT_DIR/db
+PID_FILE=$SCRIPT_DIR/pids/mysql.pid
+DATABASE_FILE=$SCRIPT_DIR/database.sql
+mkdir -p $mysql_data_dir
+mkdir -p $SCRIPT_DIR/pids
+
+# Remove the old socket and PID file
+rm -f "$PID_FILE"
+
+# Reset database if started with hard
+if [ $hard = "1" ]; then
+    # Remove old database and create new one
+    rm -rf $mysql_data_dir
+    mkdir -p $mysql_data_dir
+    pg_ctl -D "$mysql_data_dir" -o "--username=$USER" init
+
+    # Set PID file location
+    sed -i 's|#external_pid_file = '\'\''|external_pid_file = '\'$PID_FILE\''|g' $mysql_data_dir/postgresql.conf
+
+    # Set Unix socket location
+    sed -i 's|#unix_socket_directories = '\''/var/run/postgresql, /tmp'\''|unix_socket_directories = '\'$mysql_data_dir\''|g' $mysql_data_dir/postgresql.conf
+
+    # List on all IP addresses
+    #sed -i 's|#listen_addresses = '\''localhost'\''|listen_addresses = '\''*'\''|g' $mysql_data_dir/postgresql.conf
+    #sed -i 's|127.0.0.1/32|all|g' $mysql_data_dir/pg_hba.conf
+    #sed -i 's|::1/128|all|g' $mysql_data_dir/pg_hba.conf
+fi
+
+# Start the server
+pg_ctl \
+-D "$mysql_data_dir" \
+-o '-p 8079' \
+start
+
+if [ $hard = "1" ]; then
+    # Create the database from the json file
+    psql -h localhost -p 8079 -U $USER -d postgres -c "CREATE DATABASE database;"
+    psql -h localhost -p 8079 -U $USER -d database -f "$DATABASE_FILE"
+fi
