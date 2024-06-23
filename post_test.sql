@@ -126,3 +126,70 @@ END;
 '
 LANGUAGE plpgsql;
 SELECT get_child_as_json(0)
+
+
+
+
+CREATE OR REPLACE FUNCTION get_child_as_json(input_id INT, level INT, level_max INT)
+RETURNS jsonb as 
+'
+DECLARE
+	result jsonb;
+BEGIN
+   IF level < level_max THEN
+     -- Aggregate the IDs that match the input array
+     SELECT to_jsonb(rows)
+     INTO result
+     FROM 
+     (
+       SELECT m.*, (
+         SELECT jsonb_agg(get_child_as_json(child)) 
+         FROM UNNEST(m.child_ids) AS child
+       ) AS children
+       FROM db m
+       WHERE m.id = input_id
+     ) AS rows;
+    END IF
+
+    RETURN result;
+END;
+'
+LANGUAGE plpgsql;
+SELECT get_child_as_json(0)
+
+
+-- Final product
+CREATE OR REPLACE FUNCTION get_child_as_json(input_id INT, level INT, max_level INT)
+RETURNS jsonb as 
+'
+DECLARE
+	result jsonb;
+BEGIN
+   IF level < max_level THEN
+     -- Aggregate the IDs that match the input array
+     SELECT to_jsonb(rows)
+     INTO result
+     FROM 
+     (
+      SELECT m.*, (
+        SELECT jsonb_agg(get_child_as_json(child, level+1, max_level))
+         FROM UNNEST(m.child_ids) AS child
+      ) AS children
+       FROM db m
+       WHERE m.id = input_id
+     ) AS rows;
+  ELSE
+    SELECT to_jsonb(rows)
+    INTO result
+    FROM (
+      SELECT m.*, ''{}'' AS children
+      FROM db m
+      WHERE m.id = input_id
+    ) as rows;
+  END IF;
+
+  RETURN result;
+END;
+'
+LANGUAGE plpgsql;
+SELECT get_child_as_json(0, 0, 2)
