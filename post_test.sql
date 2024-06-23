@@ -32,7 +32,7 @@ BEGIN
       FROM db c
       WHERE c.id = ANY(input_id)
     )
-    SELECT  from CHILD
+    SELECT * from CHILD
     ROW_TO_JSON(child)
 END;
 '
@@ -100,3 +100,29 @@ JOIN node_tree c ON c.id = ANY(m.child)
 WHERE m.id = 0
 GROUP BY m.id
 
+
+-- Working!
+CREATE OR REPLACE FUNCTION get_child_as_json(input_id INT)
+RETURNS jsonb as 
+'
+DECLARE
+	result jsonb;
+BEGIN
+   -- Aggregate the IDs that match the input array
+   SELECT to_jsonb(rows)
+   INTO result
+   FROM 
+   (
+     SELECT m.*, (
+       SELECT jsonb_agg(get_child_as_json(child)) 
+       FROM UNNEST(m.child_ids) AS child
+     ) AS children
+     FROM db m
+     WHERE m.id = input_id
+   ) AS rows;
+
+    RETURN result;
+END;
+'
+LANGUAGE plpgsql;
+SELECT get_child_as_json(0)
