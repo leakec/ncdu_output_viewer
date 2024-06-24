@@ -20,24 +20,48 @@ const pool = new Pool({
 // Endpoint to get a node and its three levels of children
 app.get('/node/:id', async (req, res) => {
   const nodeId = parseInt(req.params.id, 10);
-  const query = `
-    WITH RECURSIVE node_tree AS (
-      SELECT id, parent_id, name, 1 AS level
-      FROM db
-      WHERE id = $1
+const query_func = `
+CREATE OR REPLACE FUNCTION get_child_as_json(input_id INT, level INT, max_level INT)
+RETURNS jsonb as 
+$$
+DECLARE
+	result jsonb;
+BEGIN
+   IF level < max_level THEN
+     -- Aggregate the IDs that match the input array
+     SELECT to_jsonb(rows)
+     INTO result
+     FROM 
+     (
+      SELECT m.*, (
+        SELECT jsonb_agg(get_child_as_json(child, level+1, max_level))
+         FROM UNNEST(m.child_ids) AS child
+      ) AS children
+       FROM db m
+       WHERE m.id = input_id
+     ) AS rows;
+  ELSE
+    SELECT to_jsonb(rows)
+    INTO result
+    FROM (
+      SELECT m.*, array[]::integer[] AS children
+      FROM db m
+      WHERE m.id = input_id
+    ) as rows;
+  END IF;
 
-      UNION ALL
+  RETURN result;
+END;
+$$
+LANGUAGE plpgsql;
+`
 
-      SELECT c.id, c.parent_id, c.name, p.level + 1 AS level
-      FROM db c
-      JOIN node_tree p ON c.parent_id = p.id
-      WHERE p.level < 3
-    )
-    SELECT *
-    FROM node_tree;
-  `;
+const query = `
+SELECT get_child_as_json($1, 0, 2)
+`
 
   try {
+    await pool.query(query_func);
     const result = await pool.query(query, [nodeId]);
     res.json(result.rows);
   } catch (err) {
