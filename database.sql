@@ -10,5 +10,5 @@ CREATE TABLE db (
     dsize BIGINT,
     asize BIGINT,
     parent_ID INT,
-    child_IDs INT[],
+    child_IDs INT[]
 );
