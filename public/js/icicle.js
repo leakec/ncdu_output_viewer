@@ -13,8 +13,8 @@ export async function icicle() {
     // console.log(data);
 
     // Specify the chart’s dimensions.
-    const width = 928;
-    const height = 1200;
+    const width = 900;
+    const height = 900;
     const num_layers = 3;
 
     // Create the SVG container.

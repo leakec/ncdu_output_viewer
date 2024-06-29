@@ -1,33 +1,4 @@
-#!/bin/bash
-
-# Parse arguments
-help=0
-hard=0
-
-while [ "$cmdargs" != "0" ]; do
-    arg=$1
-    shift
-    cmdargs=$#
-    if [ "$arg" = "-h" ]; then
-        help=1
-    elif [ "$arg" = "-help" ]; then
-        help=1
-    elif [ "$arg" = "-hard" ]; then
-        hard=1
-    fi
-done
-
-if [ $help = "1" ]; then
-    echo "usage: `basename $0` [<options>]"
-    echo "where <options> can be:"
-    echo "  -h               get this help message"
-    echo "  -hard            do a hard start. This completely removes the old database and creates a new one."
-    echo ""
-    exit 2
-fi
-
 # Setup variables
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 mysql_data_dir=$SCRIPT_DIR/db
 DATABASE_FILE=$SCRIPT_DIR/database.sql
 mkdir -p $mysql_data_dir
