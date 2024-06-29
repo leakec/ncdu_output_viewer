@@ -30,7 +30,7 @@ export async function icicle() {
     let hierarchy = d3
         .hierarchy(data)
         .sum((d) => d.dsize)
-        .sort((a, b) => b.height - a.height || b.dsize - a.dsize);
+        //.sort((a, b) => b.height - a.height || b.dsize - a.dsize);
 
     let root = d3
         .partition()
@@ -70,11 +70,10 @@ export async function icicle() {
 
     text.append("tspan").text((d) => d.data.name);
 
-    const format = d3.format(",d");
     let tspan = text
         .append("tspan")
         .attr("fill-opacity", (d) => labelVisible(d) * 0.7)
-        .text((d) => ` ${format(d.dsize)}`);
+        .text((d) => " " + d.data.dsize_h);
 
     cell.append("title").text(
         (d) =>
@@ -82,7 +81,7 @@ export async function icicle() {
                 .ancestors()
                 .map((d) => d.data.name)
                 .reverse()
-                .join("/")}\n${format(d.dsize)}`,
+                .join("/")}\n ${d.data.dsize_h}`,
     );
 
     let focus = root;
@@ -207,7 +206,7 @@ export async function icicle() {
                 tspan = text
                     .append("tspan")
                     .attr("fill-opacity", (d) => labelVisible(d) * 0.7)
-                    .text((d) => ` ${format(d.dsize)}`);
+                    .text((d) => " " + d.data.dsize_h);
 
                 cell.append("title").text(
                     (d) =>
@@ -215,7 +214,7 @@ export async function icicle() {
                             .ancestors()
                             .map((d) => d.data.name)
                             .reverse()
-                            .join("/")}\n${format(d.dsize)}`,
+                            .join("/")}\n ${d.data.dsize_h}`,
                 );
 
                 const t0 = cell

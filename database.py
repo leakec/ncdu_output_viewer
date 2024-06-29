@@ -1,5 +1,6 @@
 import json
 import psycopg2
+import humanize
 
 # Load JSON data into a DataFrame
 with open("new2.json") as f:
@@ -54,10 +55,14 @@ def recurseData(dir_or_file,parent_id=0):
         # Sort the children in order of size. Largest first.
         node["child_ids"] = [x for _,x in sorted(zip(child_dsizes, node["child_ids"]), reverse=True)]
 
+    # Create human-readable versions of dsize and asize
+    node["dsize_h"] = humanize.naturalsize(node["dsize"], binary=True)
+    node["asize_h"] = humanize.naturalsize(node["asize"], binary=True)
+
     # Insert node into PostgreSQL
     cursor.execute(
-        "INSERT INTO db (id, name, dsize, asize, parent_id, child_ids) VALUES (%s, %s, %s, %s, %s, %s)",
-        (node["id"], node["name"], node["dsize"], node["asize"], node["parent_id"], node["child_ids"])
+        "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, parent_id, child_ids) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (node["id"], node["name"], node["dsize"], node["asize"], node["dsize_h"], node["asize_h"], node["parent_id"], node["child_ids"])
     )
 
     return node
