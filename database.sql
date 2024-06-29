@@ -1,7 +1,7 @@
 -- Create table for the database entries
 CREATE TABLE db (
     ID INT PRIMARY KEY,
-    name VARCHAR(100),
+    name VARCHAR(4096),
     dsize BIGINT,
     asize BIGINT,
     parent_ID INT,
