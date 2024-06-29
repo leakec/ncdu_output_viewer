@@ -1,7 +1,9 @@
 <!doctype html>
 <div id="container"></div>
 <script type="module">
-    import { icicle } from "/js/icicle.js";
+    import { Chart } from "/js/icicle.js";
     import { sunburst } from "/js/sunburst.js";
-    container.append(await icicle());
+    let chart = new Chart();
+    await chart.init();
+    container.append(chart.icicle());
 </script>
