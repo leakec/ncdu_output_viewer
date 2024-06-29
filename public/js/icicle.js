@@ -11,7 +11,6 @@ export class Chart{
     }
 
     async init() {
-        console.log(this.num_layers);
         this.data = await this.getData(0, this.num_layers-1);
     }
 
