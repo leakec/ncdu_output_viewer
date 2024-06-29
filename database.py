@@ -11,7 +11,6 @@ conn = psycopg2.connect(
     user="leake",
     password="",
     host="localhost",
-    port=8079,
 )
 cursor = conn.cursor()
 

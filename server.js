@@ -14,7 +14,6 @@ const pool = new Pool({
   host: 'localhost',
   database: 'database',
   password: '',
-  port: 8079, // Default PostgreSQL port
 });
 
 // Endpoint to get a node and its three levels of children
