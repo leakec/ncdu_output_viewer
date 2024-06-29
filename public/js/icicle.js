@@ -92,6 +92,12 @@ export async function icicle() {
 
         if (focus.data.id == p.data.id)
         {
+            if (p.parent == null)
+            {
+                // If the parent is null, we are at the root. Do nothing.
+                return;
+            }
+            
             // Going up the tree is easy. We don't need to get any new data. Just transition.
             p = p.parent;
             focus = focus === p ? (p = p.parent) : p;
