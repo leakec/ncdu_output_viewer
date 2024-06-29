@@ -26,11 +26,12 @@ export async function icicle() {
         .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
 
     let data = await getData(0, num_layers-1);
+
     // Compute the layout.
-    let hierarchy = d3
-        .hierarchy(data)
-        .sum((d) => d.dsize)
-        //.sort((a, b) => b.height - a.height || b.dsize - a.dsize);
+    let hierarchy = d3.hierarchy(data)
+
+    // Use the pre-computed dsize as the nodes value.
+    hierarchy.each(d => d.value = d.data.dsize);
 
     let root = d3
         .partition()
@@ -143,10 +144,10 @@ export async function icicle() {
                 x.children[dark2] = new_data;
 
                 // Recompute the hierarchy and partition with the new data structure
-                hierarchy = d3
-                    .hierarchy(data)
-                    .sum((d) => d.dsize)
-                    .sort((a, b) => b.height - a.height || b.dsize - a.dsize);
+                hierarchy = d3.hierarchy(data)
+
+                // Use the pre-computed dsize as the nodes value.
+                hierarchy.each(d => d.value = d.data.dsize);
 
                 root = d3
                     .partition()
