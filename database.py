@@ -41,13 +41,18 @@ def recurseData(dir_or_file,parent_id=0):
 
     if is_dir and len(dir_or_file) > 1:
         # Move through the children of the directory first. This ensures the children will have an ID and dsize.
+        child_dsizes = []
         for child in dir_or_file[1:]:
             child = recurseData(child, parent_id=node["id"])
 
             # Add child information to this node
             node["asize"] += child["asize"]
             node["dsize"] += child["dsize"]
+            child_dsizes.append(child["dsize"])
             node["child_ids"].append(child["id"])
+
+        # Sort the children in order of size. Largest first.
+        node["child_ids"] = [x for _,x in sorted(zip(child_dsizes, node["child_ids"]), reverse=True)]
 
     # Insert node into PostgreSQL
     cursor.execute(
