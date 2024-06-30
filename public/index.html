@@ -5,6 +5,7 @@
     import { Chart } from "/js/icicle.js";
     let chart = new Chart();
     await chart.init();
+    container.append(chart.chart_type_select);
     container.append(chart.data_type_select);
     container.append(chart.icicle());
 </script>
