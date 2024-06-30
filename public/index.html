@@ -1,9 +1,10 @@
 <!doctype html>
 <div id="container"></div>
 <script type="module">
+    const container = document.getElementById('container');
     import { Chart } from "/js/icicle.js";
-    import { sunburst } from "/js/sunburst.js";
     let chart = new Chart();
     await chart.init();
+    container.append(chart.data_type_select);
     container.append(chart.icicle());
 </script>

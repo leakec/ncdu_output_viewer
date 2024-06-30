@@ -6,8 +6,18 @@ export class Chart{
     width = 900;
     height = 900;
     data = null;
+    data_type_select = document.createElement("Select");
+    data_type = "dsize";
+    data_type_h = "dsize_h";
 
-    conctructor() {
+    constructor() {
+        this.data_type_select.add( new Option("dsize", "dsize", true, true) );
+        this.data_type_select.add( new Option("asize", "asize") );
+        this.data_type_select.addEventListener("change", () => {
+            this.data_type = this.data_type_select.value;
+            this.data_type_h = this.data_type + "_h";
+        });
+
     }
 
     async init() {
@@ -41,8 +51,8 @@ export class Chart{
         // Compute the layout.
         let hierarchy = d3.hierarchy(this.data)
 
-        // Use the pre-computed dsize as the nodes value.
-        hierarchy.each(d => d.value = d.data.dsize);
+        // Use the pre-computed data type as the nodes value.
+        hierarchy.each(d => d.value = d.data[this.data_type]);
 
         let root = d3
             .partition()
@@ -84,7 +94,7 @@ export class Chart{
         let tspan = text
             .append("tspan")
             .attr("fill-opacity", (d) => labelVisible(d) * 0.7)
-            .text((d) => " " + d.data.dsize_h);
+            .text((d) => " " + d.data[this.data_type_h]);
 
         cell.append("title").text(
             (d) =>
@@ -92,7 +102,7 @@ export class Chart{
                     .ancestors()
                     .map((d) => d.data.name)
                     .reverse()
-                    .join("/")}\n ${d.data.dsize_h}`,
+                    .join("/")}\n ${d.data[this.data_type_h]}`,
         );
 
         let focus = root;
@@ -162,8 +172,8 @@ export class Chart{
                     // Recompute the hierarchy and partition with the new data structure
                     hierarchy = d3.hierarchy(this.data)
 
-                    // Use the pre-computed dsize as the nodes value.
-                    hierarchy.each(d => d.value = d.data.dsize);
+                    // Use the pre-computed data_type as the nodes value.
+                    hierarchy.each(d => d.value = d.data[this.data_type]);
 
                     root = d3
                         .partition()
@@ -223,7 +233,7 @@ export class Chart{
                     tspan = text
                         .append("tspan")
                         .attr("fill-opacity", (d) => labelVisible(d) * 0.7)
-                        .text((d) => " " + d.data.dsize_h);
+                        .text((d) => " " + d.data[this.data_type_h]);
 
                     cell.append("title").text(
                         (d) =>
@@ -231,7 +241,7 @@ export class Chart{
                                 .ancestors()
                                 .map((d) => d.data.name)
                                 .reverse()
-                                .join("/")}\n ${d.data.dsize_h}`,
+                                .join("/")}\n ${d.data[this.data_type_h]}`,
                     );
 
                     const t0 = cell
