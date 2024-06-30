@@ -3,21 +3,41 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
 export class Chart{
     num_layers = 3;
-    width = 900;
-    height = 900;
+    width = 1000;
+    height = 750;
     data = null;
+
+    // For selecting the data type: dsize or asize
     data_type_select = document.createElement("Select");
     data_type = "dsize";
     data_type_h = "dsize_h";
 
+    // For selecting the chart type
+    chart_type_select = document.createElement("Select");
+    chart_type = "icicle";
+
     constructor() {
+        // For selecting the chart type
+        this.chart_type_select.add( new Option("icicle", "icicle", true, true) );
+        this.chart_type_select.add( new Option("sunburst", "sunburst") );
+        this.chart_type_select.add( new Option("treemap", "treemap") );
+        this.chart_type_select.addEventListener("change", () => {
+            this.chart_type = this.data_type_select.value;
+        });
+        this.chart_type_select.style.position = "absolute";
+        this.chart_type_select.style.top = '10px';
+        this.chart_type_select.style.left = '10px';
+
+        // For selecting the data type
         this.data_type_select.add( new Option("dsize", "dsize", true, true) );
         this.data_type_select.add( new Option("asize", "asize") );
         this.data_type_select.addEventListener("change", () => {
             this.data_type = this.data_type_select.value;
             this.data_type_h = this.data_type + "_h";
         });
-
+        this.data_type_select.style.position = "absolute";
+        this.data_type_select.style.top = '10px';
+        this.data_type_select.style.left = '120px';
     }
 
     async init() {
@@ -46,7 +66,7 @@ export class Chart{
             .attr("viewBox", [0, 0, this.width, this.height])
             .attr("width", this.width)
             .attr("height", this.height)
-            .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif;");
+            .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif; position: absolute; top: 50px;");
 
         // Compute the layout.
         let hierarchy = d3.hierarchy(this.data)
