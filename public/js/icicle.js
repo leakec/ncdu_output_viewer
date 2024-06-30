@@ -154,7 +154,6 @@ class Icicle {
 
         );
 
-        // TODO: Put this elsewhere
         if (this.chart.focus == null)
         {
             this.chart.focus = this.chart.root;
