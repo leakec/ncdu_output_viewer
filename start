@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# User's will hit Control + C to stop the node server. When they do, this script will exit. 
+# Use trap to ensure the postgres server is stopped
+close() {
+    pg_ctl -D db stop
+}
+trap 'close' EXIT
+
+pg_ctl -D db start
+node server.js
+

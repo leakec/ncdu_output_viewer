@@ -15,8 +15,7 @@ db:
 	pg_ctl -D db stop
 
 all: package.json db
-	pg_ctl -D db start
-	node server.js
+	./start
 
 clean: 
 	rm -rf node_modules
