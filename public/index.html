@@ -3,9 +3,6 @@
 <script type="module">
     const container = document.getElementById('container');
     import { Chart } from "/js/icicle.js";
-    let chart = new Chart();
+    let chart = new Chart(container);
     await chart.init();
-    container.append(chart.chart_type_select);
-    container.append(chart.data_type_select);
-    container.append(chart.icicle());
 </script>
