@@ -163,6 +163,7 @@ class Icicle {
         this.text.append("tspan").text((d) => d.data.name);
 
         this.tspan = this.text.append("tspan")
+            // @ts-ignore
             .attr("fill-opacity", (d) => this.labelVisible(d) * 0.7)
             .text((d) => " " + d.data[this.chart.data_type_h]);
 
@@ -265,7 +266,9 @@ class Icicle {
             );
 
         this.rect.transition(t).attr("height", (d) => this.rectHeight(d.target));
+        // @ts-ignore
         this.text.transition(t).attr("fill-opacity", (d) => +this.labelVisible(d.target));
+        // @ts-ignore
         this.tspan.transition(t).attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7);
     }
 

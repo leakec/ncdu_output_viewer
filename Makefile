@@ -1,8 +1,15 @@
+SRC_TS_FILES = $(wildcard ts/*.ts)
+SRC_TS_FILES = $(wildcard ts/*.ts)
+SRC_JS_FILES = ${SRC_TS_FILES:.ts=.js}
+
 .PHONY: all clean pg
+
+%.js : %.ts package.json
+	yarn tsc -t es6 $<
 
 package.json: 
 	yarn init -p -y
-	yarn add pg express
+	yarn add pg express typescript webpack d3 @types/d3 @types/node@20.0.0
 
 db:
 	mkdir -p db
