@@ -6,6 +6,7 @@ CREATE TABLE db (
     asize BIGINT,
     dsize_h VARCHAR(10),
     asize_h VARCHAR(10),
+    leaf BOOL,
     parent_ID INT,
     child_IDs INT[]
 );
