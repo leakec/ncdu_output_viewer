@@ -32,3 +32,5 @@ clean:
 	rm -rf node_modules
 	rm -f yarn.lock package.json
 	rm -rf db
+	rm -rf public/js
+	rm -f ts/*.js

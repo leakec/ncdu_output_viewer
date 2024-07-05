@@ -2,3 +2,6 @@ db
 node_modules
 package-lock.json
 package.json
+public/js
+ts/*.js
+yarn.lock
