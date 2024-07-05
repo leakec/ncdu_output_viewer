@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 
-export class Chart{
+class Chart{
     num_layers = 3;
     width = 1000;
     height = 750;
@@ -26,7 +26,8 @@ export class Chart{
     // Current plot to draw
     plot: Icicle | Sunburst;
 
-    constructor(container) {
+    constructor() {
+        this.container = document.getElementById("container");
         // For selecting the chart type
         this.chart_type_select.add( new Option("icicle", "icicle", true, true) );
         this.chart_type_select.add( new Option("sunburst", "sunburst") );
@@ -62,9 +63,8 @@ export class Chart{
         this.data_type_select.style.top = '10px';
         this.data_type_select.style.left = '120px';
 
-        this.container = container;
-        container.append(this.chart_type_select);
-        container.append(this.data_type_select);
+        this.container.append(this.chart_type_select);
+        this.container.append(this.data_type_select);
     }
 
     async init() {
@@ -528,4 +528,5 @@ class Sunburst {
     }
 }
 
-
+let chart = new Chart();
+chart.init();

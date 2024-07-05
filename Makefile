@@ -1,6 +1,7 @@
 SRC_TS_FILES = $(wildcard ts/*.ts)
 SRC_TS_FILES = $(wildcard ts/*.ts)
 SRC_JS_FILES = ${SRC_TS_FILES:.ts=.js}
+PUBLIC_JS_FILES = ${subst ts,public/js,$(SRC_JS_FILES)}
 
 .PHONY: all clean pg
 
@@ -9,7 +10,7 @@ SRC_JS_FILES = ${SRC_TS_FILES:.ts=.js}
 
 package.json: 
 	yarn init -p -y
-	yarn add pg express typescript webpack d3 @types/d3 @types/node@20.0.0
+	yarn add pg express typescript webpack webpack-cli d3 @types/d3 @types/node@20.0.0
 
 db:
 	mkdir -p db
@@ -21,7 +22,10 @@ db:
 	python database.py
 	pg_ctl -D db stop
 
-all: package.json db
+$(PUBLIC_JS_FILES): $(SRC_JS_FILES) package.json
+	yarn webpack
+
+all: package.json db $(PUBLIC_JS_FILES)
 	./start
 
 clean: 
