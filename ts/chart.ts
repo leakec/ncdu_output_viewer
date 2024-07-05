@@ -224,10 +224,10 @@ class Icicle {
 
                     // Redraw the chart at the old focus
                     let dark3 = this.chart.root.descendants().find(d => d.data.id === this.old_focus_id);
-                    this.redraw(dark3);
-
-                    // Transition to the new spot
-                    this.transition(p, 750);
+                    this.redraw(dark3).then(() => {
+                        // Transition to the new spot
+                        this.transition(p, 750);
+                    });
                 });
             }
         };
@@ -235,17 +235,17 @@ class Icicle {
         this.rect.on("click", clicked);
     }
 
-    redraw(focus=null) {
+    async redraw(focus=null) {
         if (focus == null)
         {
             focus = this.chart.focus;
         }
         this.chart.svg.selectAll("g").remove();
         this.draw();
-        this.transition(focus, 0);
+        return this.transition(focus, 0);
     }
 
-    transition(p, time) {
+    async transition(p, time) {
         // Target the new focus
         this.chart.root.each(
             (d) =>
@@ -265,11 +265,13 @@ class Icicle {
                 (d) => `translate(${d.target.y0},${d.target.x0})`,
             );
 
-        this.rect.transition(t).attr("height", (d) => this.rectHeight(d.target));
         // @ts-ignore
-        this.text.transition(t).attr("fill-opacity", (d) => +this.labelVisible(d.target));
+        let p1 = this.rect.transition(t).attr("height", (d) => this.rectHeight(d.target)).end();
         // @ts-ignore
-        this.tspan.transition(t).attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7);
+        let p2 = this.text.transition(t).attr("fill-opacity", (d) => +this.labelVisible(d.target)).end();
+        // @ts-ignore
+        let p3 = this.tspan.transition(t).attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7).end();
+        return Promise.all([p1, p2, p3]);
     }
 
 }
@@ -310,10 +312,6 @@ class Sunburst {
         {
             this.chart.focus = this.chart.root;
         }
-        //else
-        //{
-        //    this.chart.focus = this.chart.root.descendants().find(d => d.data.id === this.chart.focus.data.id);
-        //}
 
         this.arc = d3
             .arc()
@@ -392,7 +390,6 @@ class Sunburst {
                     // If the parent is null, we are at the root. Do nothing.
                     return;
                 }
-                console.log("transition1");
 
                 this.center.datum(p.parent || this.chart.root);
                 this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
@@ -401,7 +398,6 @@ class Sunburst {
             }
             else
             {
-                console.log("transition2");
                 // Going down the tree is complicated. Get new data. Redraw the current graph and then transition.
                 this.chart.getData(p.data.id, this.chart.num_layers-1).then(new_data => {
                     if (new_data.children != null && new_data.children.length != 0)
@@ -431,11 +427,9 @@ class Sunburst {
 
                         // Redraw the chart at the old focus
                         let dark3 = this.chart.root.descendants().find(d => d.data.id === old_focus_id);
-                        // @ts-ignore
-                        this.redraw(focus=dark3);
-
-                        // Transition to the new spot
-                        this.transition(p, 750);
+                        this.redraw(dark3).then(() => {
+                            this.transition(p, 750);
+                        });
                     }
                 });
             }
@@ -445,17 +439,17 @@ class Sunburst {
         this.path.on("click", clicked);
     }
 
-    redraw(focus=null) {
+    async redraw(focus=null) {
         if (focus == null)
         {
             focus = this.chart.focus;
         }
         this.chart.svg.selectAll("g").remove();
         this.draw();
-        this.transition(focus, 0);
+        return this.transition(focus, 0);
     }
 
-    transition(p, time) {
+    async transition(p, time) {
         this.chart.root.each(
             (d) =>
                 (d.target = {
@@ -486,7 +480,7 @@ class Sunburst {
         // Transition the data on all arcs, even the ones that aren’t visible,
         // so that if this transition is interrupted, entering arcs will start
         // the next transition from the desired position.
-        this.path.transition(t)
+        let p1 = this.path.transition(t)
             .tween("data", (d) => {
                 const i = d3.interpolate(d.current, d.target);
                 return (t) => (d.current = i(t));
@@ -504,9 +498,9 @@ class Sunburst {
                 arcVisible(d.target) ? "auto" : "none",
             )
 
-            .attrTween("d", (d) => () => this.arc(d.current));
+            .attrTween("d", (d) => () => this.arc(d.current)).end();
 
-        this.label
+        let p2 = this.label
             .filter(function (d) {
                 return (
                     +this.getAttribute("fill-opacity") || labelVisible(d.target)
@@ -514,7 +508,9 @@ class Sunburst {
             })
             .transition(t)
             .attr("fill-opacity", (d) => +labelVisible(d.target))
-            .attrTween("transform", (d) => () => labelTransform(d.current));
+            .attrTween("transform", (d) => () => labelTransform(d.current)).end();
+
+       return Promise.all([p1, p2])
     }
 
     arcVisible(d) {
