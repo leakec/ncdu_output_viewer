@@ -1,0 +1,12 @@
+[package]
+name = "ncdu_output_viewer"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+clap = "*"
+
+[build-dependencies]
+clap = "*"
+clap_complete = "*"

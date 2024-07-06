@@ -5,3 +5,8 @@ package.json
 public/js
 ts/*.js
 yarn.lock
+
+
+# Added by cargo
+
+/target
