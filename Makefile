@@ -19,7 +19,7 @@ db:
 	pg_ctl -D db start
 	psql -h localhost -d postgres -c "CREATE DATABASE database;"
 	psql -h localhost -d database -f database.sql
-	python database.py
+	./target/debug/ncdu_output_viewer new2.json
 	pg_ctl -D db stop
 
 $(PUBLIC_JS_FILES): $(SRC_JS_FILES) package.json
@@ -28,9 +28,11 @@ $(PUBLIC_JS_FILES): $(SRC_JS_FILES) package.json
 all: package.json db $(PUBLIC_JS_FILES)
 	./start
 
-clean: 
+clean-db: 
+	rm -rf db
+
+clean: clean-db
 	rm -rf node_modules
 	rm -f yarn.lock package.json
-	rm -rf db
 	rm -rf public/js
 	rm -f ts/*.js

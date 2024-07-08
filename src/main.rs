@@ -66,7 +66,7 @@ lazy_static! {
 fn insert_data_pg(node: &DataNode)
 {
     let query = format!(
-        "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {})",
+        "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')",
         node.id,
         node.name,
         node.dsize,
@@ -75,7 +75,7 @@ fn insert_data_pg(node: &DataNode)
         node.asize_h,
         node.leaf,
         node.parent_id,
-        format!("[{}]", node.child_ids.iter()
+        format!("{{{}}}", node.child_ids.iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(", "))
@@ -116,10 +116,13 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                 recurse_data(child, node.id);
                 match child {
                     Node::Data(data) => {
+                        // This is a file. Only add it as a child if we are not doing dirs_only.
                         node.asize += data.asize;
                         node.dsize += data.dsize;
-                        node.child_ids.push(data.id);
-                        child_dsizes.push(data.dsize);
+                        if !DIRS_ONLY {
+                            node.child_ids.push(data.id);
+                            child_dsizes.push(data.dsize);
+                        }
                     },
                     Node::Array(arr) => match &arr[0] {
                         Node::Data(data) => {
@@ -142,6 +145,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             let mut combined: Vec<_> = node.child_ids.iter().zip(child_dsizes.iter()).collect();
             combined.sort_by_key(|&(_, key)| key);
             node.child_ids = combined.iter().map(|&(val, _)| *val).collect();
+            node.child_ids.reverse();
 
             match node.child_ids.len() {
                 0 => node.leaf = true,
@@ -160,7 +164,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
 fn build_database(file: &PathBuf) {
     let parsed: Result<Vec<Value>> = serde_json::from_str(read_to_string(file).unwrap().as_str());
 
-    let mut data: Node = match parsed {
+    let mut data: Vec<Node> = match parsed {
         Ok(mut values) => {
             // Skip the first three values
             if values.len() > 3 {
@@ -176,7 +180,7 @@ fn build_database(file: &PathBuf) {
         },
         Err(e) => {panic!{"{}", e}}
     };
-    recurse_data(&mut data, 0);
+    recurse_data(&mut data[0], 0);
 }
 
 fn main() {
