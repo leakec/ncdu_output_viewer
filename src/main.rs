@@ -21,10 +21,6 @@ struct DataNode {
     asize: u64,
     #[serde(default = "default_u64_zero")]
     dsize: u64,
-    #[serde(default = "default_usize_zero")]
-    parent_id: usize,
-    #[serde(default = "default_vec_zero")]
-    child_ids: Vec<usize>,
     #[serde(default = "default_bool_false")]
     leaf: bool,
 }
@@ -59,7 +55,7 @@ lazy_static! {
     static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
 }
 
-fn insert_data_pg(node: &DataNode)
+fn insert_data_pg(node: &DataNode, parent_id: usize, child_ids: &Vec<usize>)
 {
     let dsize_h = format_size(node.dsize, BINARY);
     let asize_h = format_size(node.asize, BINARY);
@@ -73,8 +69,8 @@ fn insert_data_pg(node: &DataNode)
         dsize_h,
         asize_h,
         node.leaf,
-        node.parent_id,
-        format!("{{{}}}", node.child_ids.iter()
+        parent_id,
+        format!("{{{}}}", child_ids.iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(", "))
@@ -89,10 +85,9 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             // This is a file
             node.leaf = true;
             node.id = ID.fetch_add(1, Ordering::SeqCst);
-            node.parent_id = parent_id;
             if !DIRS_ONLY
             {
-                insert_data_pg(node);
+                insert_data_pg(node, parent_id, &[].to_vec());
             }
             return false;
         },
@@ -108,6 +103,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             // Recurse through the children. Adding up the size
             // as we go.
             let mut child_dsizes: Vec<u64> = [].to_vec();
+            let mut child_ids: Vec<usize> = [].to_vec();
 
             for child in children {
                 recurse_data(child, node.id);
@@ -117,7 +113,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                         node.asize += data.asize;
                         node.dsize += data.dsize;
                         if !DIRS_ONLY {
-                            node.child_ids.push(data.id);
+                            child_ids.push(data.id);
                             child_dsizes.push(data.dsize);
                         }
                     },
@@ -125,7 +121,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                         Node::Data(data) => {
                             node.asize += data.asize;
                             node.dsize += data.dsize;
-                            node.child_ids.push(data.id);
+                            child_ids.push(data.id);
                             child_dsizes.push(data.dsize);
                         },
                         _ => panic!{"First node is not a data node!"},
@@ -133,22 +129,19 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                 }
             }
 
-            // Set the remaning node values
-            node.parent_id = parent_id;
-
             // Sort the children by dsize
-            let mut combined: Vec<_> = node.child_ids.iter().zip(child_dsizes.iter()).collect();
+            let mut combined: Vec<_> = child_ids.iter().zip(child_dsizes.iter()).collect();
             combined.sort_by_key(|&(_, key)| key);
-            node.child_ids = combined.iter().map(|&(val, _)| *val).collect();
-            node.child_ids.reverse();
+            child_ids = combined.iter().map(|&(val, _)| *val).collect();
+            child_ids.reverse();
 
-            match node.child_ids.len() {
+            match child_ids.len() {
                 0 => node.leaf = true,
                 _ => node.leaf = false
             };
 
             // Add node to PG
-            insert_data_pg(node);
+            insert_data_pg(node, parent_id, &child_ids);
 
             return true;
         }
