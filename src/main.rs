@@ -21,10 +21,6 @@ struct DataNode {
     asize: u64,
     #[serde(default = "default_u64_zero")]
     dsize: u64,
-    #[serde(default = "default_string")]
-    asize_h: String,
-    #[serde(default = "default_string")]
-    dsize_h: String,
     #[serde(default = "default_usize_zero")]
     parent_id: usize,
     #[serde(default = "default_vec_zero")]
@@ -65,14 +61,17 @@ lazy_static! {
 
 fn insert_data_pg(node: &DataNode)
 {
+    let dsize_h = format_size(node.dsize, BINARY);
+    let asize_h = format_size(node.asize, BINARY);
+
     let query = format!(
         "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')",
         node.id,
         node.name,
         node.dsize,
         node.asize,
-        node.dsize_h,
-        node.asize_h,
+        dsize_h,
+        asize_h,
         node.leaf,
         node.parent_id,
         format!("{{{}}}", node.child_ids.iter()
@@ -91,8 +90,6 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             node.leaf = true;
             node.id = ID.fetch_add(1, Ordering::SeqCst);
             node.parent_id = parent_id;
-            node.dsize_h = format_size(node.dsize, BINARY);
-            node.asize_h = format_size(node.asize, BINARY);
             if !DIRS_ONLY
             {
                 insert_data_pg(node);
@@ -138,8 +135,6 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
 
             // Set the remaning node values
             node.parent_id = parent_id;
-            node.dsize_h = format_size(node.dsize, BINARY);
-            node.asize_h = format_size(node.asize, BINARY);
 
             // Sort the children by dsize
             let mut combined: Vec<_> = node.child_ids.iter().zip(child_dsizes.iter()).collect();
