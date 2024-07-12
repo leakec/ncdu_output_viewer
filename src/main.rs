@@ -9,6 +9,9 @@ use postgres::{Client, NoTls};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use humansize::{format_size, BINARY};
 
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -46,7 +49,7 @@ fn default_string() -> String {
 #[serde(untagged)]
 enum Node {
     Data(DataNode),
-    Array(Vec<Node>)
+    Array(Vec<Node>),
 }
 
 static DIRS_ONLY: bool = true;
@@ -148,27 +151,43 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
     };
 }
 
+fn get_data(file: &PathBuf) -> Node
+{
+    let fs = File::open(file).unwrap();
+    
+    // Create a buffered reader
+    let mut reader = BufReader::new(fs);
+    
+    // Read lines until we reach the second line
+    let mut buffer = String::new();
+    reader.read_line(&mut buffer).unwrap(); // Read the first line
+    buffer.clear();
+    let start_pos = reader.stream_position().unwrap(); // Get the position after the first line
+    
+    // Seek to the start position of the second line
+    reader.seek(SeekFrom::Start(start_pos)).unwrap();
+    
+    // Read the rest of the file into a string
+    let mut content = String::new();
+    reader.read_to_string(&mut content).unwrap();
+    
+    // Remove characters from the end up to ]
+    if !content.is_empty() {
+        for _ in 1..100 {
+            let a = content.pop().unwrap();
+            if a == ']' {
+                break;
+            }
+        }
+    }
+
+   return serde_json::from_str(content.as_str()).unwrap();
+}
 
 fn build_database(file: &PathBuf) {
-    let parsed: Result<Vec<Value>> = serde_json::from_str(read_to_string(file).unwrap().as_str());
+    let mut data: Node = get_data(file);
 
-    let mut data: Vec<Node> = match parsed {
-        Ok(mut values) => {
-            // Skip the first three values
-            if values.len() > 3 {
-                values.drain(0..3);
-            }
-
-            // Deserialize the remaining values as Vec<Node>
-            match from_value(Value::Array(values))
-            {
-                Ok(val) => val,
-                Err(e) => {panic!{"{}", e}}
-            }
-        },
-        Err(e) => {panic!{"{}", e}}
-    };
-    recurse_data(&mut data[0], 0);
+    recurse_data(&mut data, 0);
 }
 
 fn main() {
