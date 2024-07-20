@@ -17,8 +17,6 @@ extern crate lazy_static;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DataNode {
-    #[serde(default = "default_usize_zero")]
-    id: usize,
     name: String,
     #[serde(default = "default_u64_zero")]
     asize: u64,
@@ -31,17 +29,8 @@ struct DataNode {
 fn default_u64_zero() -> u64 {
     0
 }
-fn default_usize_zero() -> usize {
-    0
-}
-fn default_vec_zero() -> Vec<usize> {
-    [].to_vec()
-}
 fn default_bool_false() -> bool {
     false 
-}
-fn default_string() -> String {
-    String::new()
 }
 
 // Define a recursive enum to represent either a DataType or a nested array
@@ -58,14 +47,14 @@ lazy_static! {
     static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
 }
 
-fn insert_data_pg(node: &DataNode, parent_id: usize, child_ids: &Vec<usize>)
+fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids: &Vec<usize>)
 {
     let dsize_h = format_size(node.dsize, BINARY);
     let asize_h = format_size(node.asize, BINARY);
 
     let query = format!(
         "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')",
-        node.id,
+        node_id,
         node.name,
         node.dsize,
         node.asize,
@@ -82,17 +71,17 @@ fn insert_data_pg(node: &DataNode, parent_id: usize, child_ids: &Vec<usize>)
     let _ = pg.batch_execute(query.as_str());
 }
 
-fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
+fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> usize {
+    let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
         Node::Data(node) => {
             // This is a file
             node.leaf = true;
-            node.id = ID.fetch_add(1, Ordering::SeqCst);
             if !DIRS_ONLY
             {
-                insert_data_pg(node, parent_id, &[].to_vec());
+                insert_data_pg(node, &node_id, parent_id, &[].to_vec());
             }
-            return false;
+            return node_id;
         },
         Node::Array(arr) => {
             // This is a directory. Get the node for the directory.
@@ -101,7 +90,6 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                 Node::Data(data) => data,
                 _ => panic!{"First node is not a data node!"},
             };
-            node.id = ID.fetch_add(1, Ordering::SeqCst);
 
             // Recurse through the children. Adding up the size
             // as we go.
@@ -109,14 +97,14 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             let mut child_ids: Vec<usize> = [].to_vec();
 
             for child in children {
-                recurse_data(child, node.id);
+                let child_id = recurse_data(child, node_id);
                 match child {
                     Node::Data(data) => {
                         // This is a file. Only add it as a child if we are not doing dirs_only.
                         node.asize += data.asize;
                         node.dsize += data.dsize;
                         if !DIRS_ONLY {
-                            child_ids.push(data.id);
+                            child_ids.push(child_id);
                             child_dsizes.push(data.dsize);
                         }
                     },
@@ -124,7 +112,7 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
                         Node::Data(data) => {
                             node.asize += data.asize;
                             node.dsize += data.dsize;
-                            child_ids.push(data.id);
+                            child_ids.push(child_id);
                             child_dsizes.push(data.dsize);
                         },
                         _ => panic!{"First node is not a data node!"},
@@ -144,9 +132,9 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> bool {
             };
 
             // Add node to PG
-            insert_data_pg(node, parent_id, &child_ids);
+            insert_data_pg(node, &node_id, parent_id, &child_ids);
 
-            return true;
+            return node_id;
         }
     };
 }
