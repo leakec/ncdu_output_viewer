@@ -1,16 +1,14 @@
 mod cli;
 
 use serde::{Deserialize, Serialize};
-use serde_json::{Result, Value, from_value};
 use std::path::PathBuf;
-use std::fs::read_to_string;
 use std::sync::{Arc, Mutex};
 use postgres::{Client, NoTls};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use humansize::{format_size, BINARY};
 
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 
 #[macro_use]
 extern crate lazy_static;
@@ -71,23 +69,29 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
     let _ = pg.batch_execute(query.as_str());
 }
 
-fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> usize {
+// Returns the DataNode, the ID of the DataNode, and is_file. If is_file is true,
+// then the child is a file. If false, then it was a directory.
+fn recurse_data(dir_or_file: Node, parent_id: usize) -> (DataNode, usize, bool) {
     let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
-        Node::Data(node) => {
+        Node::Data(mut node) => {
             // This is a file
             node.leaf = true;
             if !DIRS_ONLY
             {
-                insert_data_pg(node, &node_id, parent_id, &[].to_vec());
+                insert_data_pg(&node, &node_id, parent_id, &[].to_vec());
             }
-            return node_id;
+            return (node, node_id, true);
         },
         Node::Array(arr) => {
+            let mut dark = arr.into_iter();
+
             // This is a directory. Get the node for the directory.
-            let (dark, children) = arr.split_first_mut().unwrap();
-            let node = match dark {
-                Node::Data(data) => data,
+            let mut node = match dark.next() {
+                Some(val) => match val {
+                    Node::Data(data) => data,
+                    _ => panic!{"First node is not a data node!"},
+                }
                 _ => panic!{"First node is not a data node!"},
             };
 
@@ -96,27 +100,14 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> usize {
             let mut child_dsizes: Vec<u64> = [].to_vec();
             let mut child_ids: Vec<usize> = [].to_vec();
 
-            for child in children {
-                let child_id = recurse_data(child, node_id);
-                match child {
-                    Node::Data(data) => {
-                        // This is a file. Only add it as a child if we are not doing dirs_only.
-                        node.asize += data.asize;
-                        node.dsize += data.dsize;
-                        if !DIRS_ONLY {
-                            child_ids.push(child_id);
-                            child_dsizes.push(data.dsize);
-                        }
-                    },
-                    Node::Array(arr) => match &arr[0] {
-                        Node::Data(data) => {
-                            node.asize += data.asize;
-                            node.dsize += data.dsize;
-                            child_ids.push(child_id);
-                            child_dsizes.push(data.dsize);
-                        },
-                        _ => panic!{"First node is not a data node!"},
-                    }
+            for c in dark {
+                let (child,child_id,is_file) = recurse_data(c, node_id);
+                node.asize += child.asize;
+                node.dsize += child.dsize;
+                if (is_file && !DIRS_ONLY) || (!is_file)
+                {
+                    child_ids.push(child_id);
+                    child_dsizes.push(child.dsize);
                 }
             }
 
@@ -132,9 +123,9 @@ fn recurse_data(dir_or_file: &mut Node, parent_id: usize) -> usize {
             };
 
             // Add node to PG
-            insert_data_pg(node, &node_id, parent_id, &child_ids);
+            insert_data_pg(&node, &node_id, parent_id, &child_ids);
 
-            return node_id;
+            return (node, node_id, false);
         }
     };
 }
@@ -173,9 +164,9 @@ fn get_data(file: &PathBuf) -> Node
 }
 
 fn build_database(file: &PathBuf) {
-    let mut data: Node = get_data(file);
+    let data: Node = get_data(file);
 
-    recurse_data(&mut data, 0);
+    recurse_data(data, 0);
 }
 
 fn main() {
