@@ -1,6 +1,6 @@
 mod cli;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use postgres::{Client, NoTls};
@@ -15,7 +15,7 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 #[macro_use]
 extern crate lazy_static;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 struct DataNode {
     name: String,
     #[serde(default = "default_u64_zero")]
@@ -34,7 +34,7 @@ fn default_bool_false() -> bool {
 }
 
 // Define a recursive enum to represent either a DataType or a nested array
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(untagged)]
 enum Node {
     Data(DataNode),
