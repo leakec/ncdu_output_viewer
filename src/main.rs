@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use postgres::{Client, NoTls};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::process::{Command, Stdio};
 use humansize::{format_size, BINARY};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
@@ -71,7 +73,7 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
 
 // Returns the DataNode, the ID of the DataNode, and is_file. If is_file is true,
 // then the child is a file. If false, then it was a directory.
-fn recurse_data(dir_or_file: Node, parent_id: usize) -> (DataNode, usize, bool) {
+fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar) -> (DataNode, usize, bool) {
     let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
         Node::Data(mut node) => {
@@ -81,6 +83,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize) -> (DataNode, usize, bool) 
             {
                 insert_data_pg(&node, &node_id, parent_id, &[].to_vec());
             }
+            pbar.inc(1);
             return (node, node_id, true);
         },
         Node::Array(arr) => {
@@ -101,7 +104,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize) -> (DataNode, usize, bool) 
             let mut child_ids: Vec<usize> = [].to_vec();
 
             for c in dark {
-                let (child,child_id,is_file) = recurse_data(c, node_id);
+                let (child,child_id,is_file) = recurse_data(c, node_id, pbar);
                 node.asize += child.asize;
                 node.dsize += child.dsize;
                 if (is_file && !DIRS_ONLY) || (!is_file)
@@ -125,6 +128,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize) -> (DataNode, usize, bool) 
             // Add node to PG
             insert_data_pg(&node, &node_id, parent_id, &child_ids);
 
+            pbar.inc(1);
             return (node, node_id, false);
         }
     };
@@ -164,9 +168,24 @@ fn get_data(file: &PathBuf) -> Node
 }
 
 fn build_database(file: &PathBuf) {
+    // Create command to get number of lines
+    let cmd = Command::new("wc").arg("-l").arg(file).stdout(Stdio::piped()).spawn().unwrap();
+
+    // While counting lines, parse the data structure to get the nodes.
     let data: Node = get_data(file);
 
-    recurse_data(data, 0);
+    // Get the number of lines from the command
+    let num_lines: u64 = String::from_utf8(cmd.wait_with_output().expect("failed to wait on wc").stdout).expect("failed to convert bytes to string").rsplit_once(" ").unwrap().0.parse().unwrap();
+    let pbar = ProgressBar::new(num_lines);
+    pbar.set_style(ProgressStyle::with_template("{bar:40.cyan/grey} {percent}% [{elapsed_precise}<{duration_precise}]")
+    .unwrap()
+    );
+
+
+    recurse_data(data, 0, &pbar);
+    pbar.set_position(num_lines);
+    pbar.finish();
+
 }
 
 fn main() {
