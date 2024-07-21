@@ -4,8 +4,8 @@ CREATE TABLE db (
     name VARCHAR(4096),
     dsize BIGINT,
     asize BIGINT,
-    dsize_h VARCHAR(10),
-    asize_h VARCHAR(10),
+    dsize_h VARCHAR(15),
+    asize_h VARCHAR(15),
     leaf BOOL,
     parent_ID INT,
     child_IDs INT[]
