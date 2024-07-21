@@ -47,13 +47,39 @@ lazy_static! {
     static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
 }
 
-fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids: &Vec<usize>)
+struct PgBatch {
+    max_queries: i8,
+    query_count: i8,
+    query: String
+}
+
+impl PgBatch {
+    fn flush(&mut self) {
+        let mut pg = PG.lock().unwrap();
+        match pg.batch_execute(self.query.as_str())
+        {
+            Err(e) => panic!{"{}. Query was:\n {}",e,self.query},
+            _ => ()
+        }
+        self.query = "".to_string();
+        self.query_count = 0;
+    }
+    fn add_query(&mut self, query: String) {
+        self.query += &query;
+        self.query_count += 1;
+        if self.query_count == self.max_queries {
+            self.flush();
+        }
+    }
+}
+
+fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids: &Vec<usize>, pg_batch: &mut PgBatch)
 {
     let dsize_h = format_size(node.dsize, BINARY);
     let asize_h = format_size(node.asize, BINARY);
 
     let query = format!(
-        "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')",
+        "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');",
         node_id,
         node.name,
         node.dsize,
@@ -67,13 +93,12 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
             .collect::<Vec<String>>()
             .join(", "))
     );
-    let mut pg = PG.lock().unwrap();
-    let _ = pg.batch_execute(query.as_str());
+    pg_batch.add_query(query);
 }
 
 // Returns the DataNode, the ID of the DataNode, and is_file. If is_file is true,
 // then the child is a file. If false, then it was a directory.
-fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar) -> (DataNode, usize, bool) {
+fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batch: &mut PgBatch) -> (DataNode, usize, bool) {
     let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
         Node::Data(mut node) => {
@@ -81,7 +106,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar) -> (Dat
             node.leaf = true;
             if !DIRS_ONLY
             {
-                insert_data_pg(&node, &node_id, parent_id, &[].to_vec());
+                insert_data_pg(&node, &node_id, parent_id, &[].to_vec(), pg_batch);
             }
             pbar.inc(1);
             return (node, node_id, true);
@@ -104,7 +129,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar) -> (Dat
             let mut child_ids: Vec<usize> = [].to_vec();
 
             for c in dark {
-                let (child,child_id,is_file) = recurse_data(c, node_id, pbar);
+                let (child,child_id,is_file) = recurse_data(c, node_id, pbar, pg_batch);
                 node.asize += child.asize;
                 node.dsize += child.dsize;
                 if (is_file && !DIRS_ONLY) || (!is_file)
@@ -126,7 +151,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar) -> (Dat
             };
 
             // Add node to PG
-            insert_data_pg(&node, &node_id, parent_id, &child_ids);
+            insert_data_pg(&node, &node_id, parent_id, &child_ids, pg_batch);
 
             pbar.inc(1);
             return (node, node_id, false);
@@ -177,12 +202,17 @@ fn build_database(file: &PathBuf) {
     // Get the number of lines from the command
     let num_lines: u64 = String::from_utf8(cmd.wait_with_output().expect("failed to wait on wc").stdout).expect("failed to convert bytes to string").rsplit_once(" ").unwrap().0.parse().unwrap();
     let pbar = ProgressBar::new(num_lines);
-    pbar.set_style(ProgressStyle::with_template("{bar:40.cyan/grey} {percent}% [{elapsed_precise}<{duration_precise}]")
-    .unwrap()
-    );
+    pbar.set_style(ProgressStyle::with_template("{bar:40.cyan/grey} {percent}% [{elapsed_precise}<{eta_precise}]").unwrap());
 
+    // Create postgress batcher
+    let mut pg_batch = PgBatch{
+        max_queries: 50,
+        query_count: 0,
+        query: "".to_string()
+    };
 
-    recurse_data(data, 0, &pbar);
+    recurse_data(data, 0, &pbar, &mut pg_batch);
+    pg_batch.flush();
     pbar.set_position(num_lines);
     pbar.finish();
 
