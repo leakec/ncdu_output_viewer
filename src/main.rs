@@ -81,7 +81,7 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
     let query = format!(
         "INSERT INTO db (id, name, dsize, asize, dsize_h, asize_h, leaf, parent_id, child_ids) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}');",
         node_id,
-        node.name,
+        node.name.replace("'","''"),
         node.dsize,
         node.asize,
         dsize_h,
