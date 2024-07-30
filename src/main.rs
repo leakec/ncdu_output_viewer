@@ -10,7 +10,7 @@ use humansize::{format_size, BINARY};
 use indicatif::{ProgressBar, ProgressStyle};
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 
 #[macro_use]
 extern crate lazy_static;
@@ -41,7 +41,9 @@ enum Node {
     Array(Vec<Node>),
 }
 
+static XDU_OUTPUT_FILE: &str = "test_file";
 static DIRS_ONLY: bool = true;
+static XDU_OUTPUT: bool = true;
 static ID: AtomicUsize = AtomicUsize::new(0);
 lazy_static! {
     static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
@@ -73,6 +75,19 @@ impl PgBatch {
     }
 }
 
+struct XDiskUsageWriter {
+    file: File
+}
+
+impl XDiskUsageWriter {
+    fn new(file: PathBuf) -> XDiskUsageWriter {
+        return XDiskUsageWriter { file: File::create(file).expect("Could not create file.") };
+    }
+    fn insert_data(&mut self, node: &DataNode, parent_name: String) {
+        let _ = self.file.write_all(((node.dsize/1024).to_string() + "\t" + &parent_name + &node.name + "\n").as_bytes());
+    }
+}
+
 fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids: &Vec<usize>, pg_batch: &mut PgBatch)
 {
     let dsize_h = format_size(node.dsize, BINARY);
@@ -98,7 +113,7 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
 
 // Returns the DataNode, the ID of the DataNode, and is_file. If is_file is true,
 // then the child is a file. If false, then it was a directory.
-fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batch: &mut PgBatch) -> (DataNode, usize, bool) {
+fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batch: &mut PgBatch, parent_string: String, xdu: &mut Option<XDiskUsageWriter>) -> (DataNode, usize, bool) {
     let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
         Node::Data(mut node) => {
@@ -128,8 +143,12 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
             let mut child_dsizes: Vec<u64> = [].to_vec();
             let mut child_ids: Vec<usize> = [].to_vec();
 
+            let mut child_string = parent_string.clone();
+            child_string += &node.name;
+            child_string += "/";
+
             for c in dark {
-                let (child,child_id,is_file) = recurse_data(c, node_id, pbar, pg_batch);
+                let (child,child_id,is_file) = recurse_data(c, node_id, pbar, pg_batch, child_string.clone(), xdu);
                 node.asize += child.asize;
                 node.dsize += child.dsize;
                 if (is_file && !DIRS_ONLY) || (!is_file)
@@ -152,6 +171,11 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
 
             // Add node to PG
             insert_data_pg(&node, &node_id, parent_id, &child_ids, pg_batch);
+            match xdu {
+                Some(writer) => {
+                    writer.insert_data(&node, parent_string)},
+                _ => ()
+            }
 
             pbar.inc(1);
             return (node, node_id, false);
@@ -211,7 +235,13 @@ fn build_database(file: &PathBuf) {
         query: "".to_string()
     };
 
-    recurse_data(data, 0, &pbar, &mut pg_batch);
+    let mut xdu: Option<XDiskUsageWriter> = match XDU_OUTPUT
+    {
+        true => Some(XDiskUsageWriter::new(PathBuf::from(XDU_OUTPUT_FILE))),
+        false => None
+    };
+
+    recurse_data(data, 0, &pbar, &mut pg_batch, "".to_string(), &mut xdu);
     pg_batch.flush();
     pbar.set_position(num_lines);
     pbar.finish();
