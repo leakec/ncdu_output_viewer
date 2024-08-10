@@ -44,7 +44,7 @@ class Chart{
                 this.plot = new Sunburst(this);
             }
             this.focus = this.root.descendants().find(d => d.data.id === this.focus.data.id);
-            this.plot.transition(this.focus, 0);
+            this.plot.redraw()
             this.container.append(this.svg.node());
         });
         this.chart_type_select.style.position = "absolute";
