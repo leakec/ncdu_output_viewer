@@ -152,7 +152,7 @@ class Icicle {
         this.rect = this.cell.append("rect")
             .attr("width", (d) => d.y1 - d.y0 - 1)
             .attr("height", (d) => this.rectHeight(d))
-            .attr("fill-opacity", 0.6)
+            .attr("fill-opacity", (d) => d.data.leaf ? 0.4 : 0.6)
             .attr("fill", (d) => {
                 if (!d.depth) return "#ccc";
                 while (d.depth > 1) d = d.parent;
@@ -199,6 +199,12 @@ class Icicle {
             }
             else
             {
+                // Early out if this is a leaf. Don't transition.
+                if (p.data.leaf)
+                {
+                    return;
+                }
+
                 // Going down the tree is complicated. Get new data. Redraw the current graph and then transition.
                 this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
                 this.chart.getData(p.data.id, this.chart.num_layers-1).then(new_data => {
@@ -339,9 +345,8 @@ class Sunburst {
                 return this.chart.color(d.data.name);
             })
             .attr("fill-opacity", (d) =>
-                // this.arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0,
                 // @ts-ignore
-                this.arcVisible(d.current) ? 0.6 : 0,
+                this.arcVisible(d.current) ? (d.data.leaf ? 0.4 : 0.6) : 0,
             )
             .attr("pointer-events", (d) =>
                 // @ts-ignore
@@ -398,6 +403,12 @@ class Sunburst {
             }
             else
             {
+                // Early out if this is a leaf. Don't transition.
+                if (p.data.leaf)
+                {
+                    return;
+                }
+
                 // Going down the tree is complicated. Get new data. Redraw the current graph and then transition.
                 this.chart.getData(p.data.id, this.chart.num_layers-1).then(new_data => {
                     if (new_data.children != null && new_data.children.length != 0)
@@ -491,8 +502,8 @@ class Sunburst {
                 );
             })
             .attr("fill-opacity", (d) =>
-                // arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0,
-                arcVisible(d.target) ? 0.6 : 0,
+                // @ts-ignore
+                this.arcVisible(d.target) ? (d.data.leaf ? 0.4 : 0.6) : 0,
             )
             .attr("pointer-events", (d) =>
                 arcVisible(d.target) ? "auto" : "none",
