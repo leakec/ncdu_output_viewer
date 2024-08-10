@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use postgres::{Client, NoTls};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::process::{Command, Stdio};
 use humansize::{format_size, BINARY};
 use indicatif::{ProgressBar, ProgressStyle};
@@ -41,9 +41,8 @@ enum Node {
     Array(Vec<Node>),
 }
 
-static XDU_OUTPUT_FILE: &str = "test_file";
-static DIRS_ONLY: bool = true;
-static XDU_OUTPUT: bool = true;
+static DIRS_ONLY: AtomicBool = AtomicBool::new(true);
+static CREATE_DATABASE: AtomicBool = AtomicBool::new(true);
 static ID: AtomicUsize = AtomicUsize::new(0);
 lazy_static! {
     static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
@@ -52,7 +51,7 @@ lazy_static! {
 struct PgBatch {
     max_queries: i8,
     query_count: i8,
-    query: String
+    query: String,
 }
 
 impl PgBatch {
@@ -119,9 +118,11 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
         Node::Data(mut node) => {
             // This is a file
             node.leaf = true;
-            if !DIRS_ONLY
+            if !DIRS_ONLY.load(Ordering::Relaxed)
             {
-                insert_data_pg(&node, &node_id, parent_id, &[].to_vec(), pg_batch);
+                if CREATE_DATABASE.load(Ordering::Relaxed) {
+                    insert_data_pg(&node, &node_id, parent_id, &[].to_vec(), pg_batch);
+                }
             }
             pbar.inc(1);
             return (node, node_id, true);
@@ -151,7 +152,7 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
                 let (child,child_id,is_file) = recurse_data(c, node_id, pbar, pg_batch, child_string.clone(), xdu);
                 node.asize += child.asize;
                 node.dsize += child.dsize;
-                if (is_file && !DIRS_ONLY) || (!is_file)
+                if (is_file && !DIRS_ONLY.load(Ordering::Relaxed)) || (!is_file)
                 {
                     child_ids.push(child_id);
                     child_dsizes.push(child.dsize);
@@ -170,7 +171,11 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
             };
 
             // Add node to PG
-            insert_data_pg(&node, &node_id, parent_id, &child_ids, pg_batch);
+            if CREATE_DATABASE.load(Ordering::Relaxed) {
+                insert_data_pg(&node, &node_id, parent_id, &child_ids, pg_batch);
+            }
+            
+            // Write line in xdu output file
             match xdu {
                 Some(writer) => {
                     writer.insert_data(&node, parent_string)},
@@ -216,7 +221,7 @@ fn get_data(file: &PathBuf) -> Node
    return serde_json::from_str(content.as_str()).unwrap();
 }
 
-fn build_database(file: &PathBuf) {
+fn build_database(file: &PathBuf, xdu_output_file: Option<&String>) {
     // Create command to get number of lines
     let cmd = Command::new("wc").arg("-l").arg(file).stdout(Stdio::piped()).spawn().unwrap();
 
@@ -235,10 +240,10 @@ fn build_database(file: &PathBuf) {
         query: "".to_string()
     };
 
-    let mut xdu: Option<XDiskUsageWriter> = match XDU_OUTPUT
+    let mut xdu: Option<XDiskUsageWriter> = match xdu_output_file
     {
-        true => Some(XDiskUsageWriter::new(PathBuf::from(XDU_OUTPUT_FILE))),
-        false => None
+        Some(file_name) => Some(XDiskUsageWriter::new(PathBuf::from(file_name))),
+        _ => None
     };
 
     recurse_data(data, 0, &pbar, &mut pg_batch, "".to_string(), &mut xdu);
@@ -250,8 +255,19 @@ fn build_database(file: &PathBuf) {
 
 fn main() {
     let matches = cli::build_cli().get_matches();
+
+    // DIRS_ONLY is the opposite of store_files
+    DIRS_ONLY.store(!matches.contains_id("store_files"), Ordering::SeqCst);
+
+    // CREATE_DATABASE is the opposite of no_database
+    CREATE_DATABASE.store(!matches.contains_id("no_database"), Ordering::SeqCst);
+
+    // Get the xdu_output_file if it was specified
+    let xdu_output_file = matches.get_one::<String>("xdu_output_file");
+
+    // Get the file that contains the data to put in the database
     match matches.get_one::<String>("file") {
-        Some(file) => build_database(&PathBuf::from(file)),
+        Some(file) => build_database(&PathBuf::from(file), xdu_output_file),
         _ => panic!{"No file specified"},
     };
 }
