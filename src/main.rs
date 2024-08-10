@@ -2,7 +2,6 @@ mod cli;
 
 use serde::Deserialize;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use postgres::{Client, NoTls};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::process::{Command, Stdio};
@@ -11,9 +10,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
-
-#[macro_use]
-extern crate lazy_static;
 
 #[derive(Deserialize, Debug)]
 struct DataNode {
@@ -44,26 +40,28 @@ enum Node {
 static DIRS_ONLY: AtomicBool = AtomicBool::new(true);
 static CREATE_DATABASE: AtomicBool = AtomicBool::new(true);
 static ID: AtomicUsize = AtomicUsize::new(0);
-lazy_static! {
-    static ref PG: Arc<Mutex<Client>> = Arc::new(Mutex::new(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()));
-}
 
 struct PgBatch {
     max_queries: i8,
     query_count: i8,
     query: String,
+    pg: Option<Client>,
 }
 
 impl PgBatch {
     fn flush(&mut self) {
-        let mut pg = PG.lock().unwrap();
-        match pg.batch_execute(self.query.as_str())
-        {
-            Err(e) => panic!{"{}. Query was:\n {}",e,self.query},
+        match &mut self.pg {
+            Some(val) => {
+                match val.batch_execute(self.query.as_str())
+                {
+                    Err(e) => panic!{"{}. Query was:\n {}",e,self.query},
+                    _ => ()
+                }
+                self.query = "".to_string();
+                self.query_count = 0;
+            },
             _ => ()
         }
-        self.query = "".to_string();
-        self.query_count = 0;
     }
     fn add_query(&mut self, query: String) {
         self.query += &query;
@@ -237,7 +235,11 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>) {
     let mut pg_batch = PgBatch{
         max_queries: 50,
         query_count: 0,
-        query: "".to_string()
+        query: "".to_string(),
+        pg: match CREATE_DATABASE.load(Ordering::Relaxed) {
+            true => Some(Client::connect("postgresql://leake:@localhost/database", NoTls).unwrap()),
+            false => None
+        }
     };
 
     let mut xdu: Option<XDiskUsageWriter> = match xdu_output_file
@@ -257,10 +259,17 @@ fn main() {
     let matches = cli::build_cli().get_matches();
 
     // DIRS_ONLY is the opposite of store_files
-    DIRS_ONLY.store(!matches.contains_id("store_files"), Ordering::SeqCst);
+    DIRS_ONLY.store(
+        match matches.get_one::<bool>("store_files") {
+            Some(val) => !val,
+            _ => false
+        }, Ordering::SeqCst);
 
     // CREATE_DATABASE is the opposite of no_database
-    CREATE_DATABASE.store(!matches.contains_id("no_database"), Ordering::SeqCst);
+    CREATE_DATABASE.store(
+        match matches.get_one::<bool>("no_database") {
+            Some(val) => !val,
+            _ => true }, Ordering::SeqCst);
 
     // Get the xdu_output_file if it was specified
     let xdu_output_file = matches.get_one::<String>("xdu_output_file");

@@ -20,6 +20,5 @@ pub fn build_cli() -> Command {
              .long("xdu-output-file")
              .help("Filename for the xdu_output_file. If none is specified, then no xdu output will be created. This file is designed for use with xdiskutility.")
              .required(false)
-             .default_value("")
         )
 }
