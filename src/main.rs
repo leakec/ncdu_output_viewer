@@ -110,7 +110,7 @@ fn insert_data_pg(node: &DataNode, node_id: &usize, parent_id: usize, child_ids:
 
 // Returns the DataNode, the ID of the DataNode, and is_file. If is_file is true,
 // then the child is a file. If false, then it was a directory.
-fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batch: &mut PgBatch, parent_string: String, xdu: &mut Option<XDiskUsageWriter>) -> (DataNode, usize, bool) {
+fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: Option<&ProgressBar>, pg_batch: &mut PgBatch, parent_string: String, xdu: &mut Option<XDiskUsageWriter>) -> (DataNode, usize, bool) {
     let node_id = ID.fetch_add(1, Ordering::SeqCst);
     match dir_or_file {
         Node::Data(mut node) => {
@@ -122,7 +122,10 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
                     insert_data_pg(&node, &node_id, parent_id, &[].to_vec(), pg_batch);
                 }
             }
-            pbar.inc(1);
+            match pbar {
+                Some(pb) => pb.inc(1),
+                _ => ()
+            }
             return (node, node_id, true);
         },
         Node::Array(arr) => {
@@ -180,7 +183,10 @@ fn recurse_data(dir_or_file: Node, parent_id: usize, pbar: &ProgressBar, pg_batc
                 _ => ()
             }
 
-            pbar.inc(1);
+            match pbar {
+                Some(pb) => pb.inc(1),
+                _ => ()
+            }
             return (node, node_id, false);
         }
     };
@@ -219,7 +225,7 @@ fn get_data(file: &PathBuf) -> Node
    return serde_json::from_str(content.as_str()).unwrap();
 }
 
-fn build_database(file: &PathBuf, xdu_output_file: Option<&String>) {
+fn build_database(file: &PathBuf, xdu_output_file: Option<&String>, use_pbar: bool) {
     // Create command to get number of lines
     let cmd = Command::new("wc").arg("-l").arg(file).stdout(Stdio::piped()).spawn().unwrap();
 
@@ -227,9 +233,15 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>) {
     let data: Node = get_data(file);
 
     // Get the number of lines from the command
-    let num_lines: u64 = String::from_utf8(cmd.wait_with_output().expect("failed to wait on wc").stdout).expect("failed to convert bytes to string").rsplit_once(" ").unwrap().0.parse().unwrap();
-    let pbar = ProgressBar::new(num_lines);
-    pbar.set_style(ProgressStyle::with_template("{bar:40.cyan/grey} {percent}% [{elapsed_precise}<{eta_precise}]").unwrap());
+    let (pbar, num_lines) = match use_pbar {
+        true => {
+            let num_lines: u64 = String::from_utf8(cmd.wait_with_output().expect("failed to wait on wc").stdout).expect("failed to convert bytes to string").rsplit_once(" ").unwrap().0.parse().unwrap();
+            let pbar = ProgressBar::new(num_lines);
+            pbar.set_style(ProgressStyle::with_template("{bar:40.cyan/grey} {percent}% [{elapsed_precise}<{eta_precise}]").unwrap());
+            (Some(pbar), num_lines)
+        },
+        false => (None, 0)
+    };
 
     // Create postgress batcher
     let mut pg_batch = PgBatch{
@@ -248,10 +260,15 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>) {
         _ => None
     };
 
-    recurse_data(data, 0, &pbar, &mut pg_batch, "".to_string(), &mut xdu);
+    recurse_data(data, 0, pbar.as_ref(), &mut pg_batch, "".to_string(), &mut xdu);
     pg_batch.flush();
-    pbar.set_position(num_lines);
-    pbar.finish();
+    match pbar {
+        Some(pbar) => {
+            pbar.set_position(num_lines);
+            pbar.finish();
+        }
+        _ => ()
+    }
 
 }
 
@@ -274,9 +291,15 @@ fn main() {
     // Get the xdu_output_file if it was specified
     let xdu_output_file = matches.get_one::<String>("xdu_output_file");
 
+    // use_pbar is the opposite of no_progress
+    let use_pbar = match matches.get_one::<bool>("no_pbar") {
+        Some(val) => !val,
+        _ => true
+    };
+
     // Get the file that contains the data to put in the database
     match matches.get_one::<String>("file") {
-        Some(file) => build_database(&PathBuf::from(file), xdu_output_file),
+        Some(file) => build_database(&PathBuf::from(file), xdu_output_file, use_pbar),
         _ => panic!{"No file specified"},
     };
 }
