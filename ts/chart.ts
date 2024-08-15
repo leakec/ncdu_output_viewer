@@ -34,7 +34,6 @@ class Chart{
         // For selecting the chart type
         this.chart_type_select.add( new Option("icicle", "icicle", true, true) );
         this.chart_type_select.add( new Option("sunburst", "sunburst") );
-        this.chart_type_select.add( new Option("treemap", "treemap") );
         this.chart_type_select.addEventListener("change", () => {
             this.chart_type = this.chart_type_select.value;
             this.svg.node()!.remove();
