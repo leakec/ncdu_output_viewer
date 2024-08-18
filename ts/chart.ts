@@ -1,5 +1,3 @@
-import * as d3 from "d3";
-
 class Chart {
     width = 1000;
     height = 750;
@@ -310,9 +308,9 @@ class Icicle {
             .transition(t)
             .attr("fill-opacity", (d) => +this.labelVisible(d.target))
             .end();
-        // @ts-ignore
         let p3 = this.tspan
             .transition(t)
+            // @ts-ignore
             .attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7)
             .end();
         return Promise.all([p1, p2, p3]);
@@ -381,8 +379,8 @@ class Sunburst {
             .padRadius(this.radius * 1.5)
             // @ts-ignore
             .innerRadius((d) => d.y0 * this.radius)
-            // @ts-ignore
             .outerRadius((d) =>
+                // @ts-ignore
                 Math.max(d.y0 * this.radius, d.y1 * this.radius - 1),
             );
 
@@ -400,6 +398,7 @@ class Sunburst {
             .attr("fill-opacity", (d) =>
                 // @ts-ignore
                 this.arcVisible(d.current, this.chart.num_layers)
+                    // @ts-ignore
                     ? d.data.leaf
                         ? 0.4
                         : 0.6
@@ -433,13 +432,13 @@ class Sunburst {
             .data(this.chart.root.descendants().slice(1))
             .join("text")
             .attr("dy", "0.35em")
-            // @ts-ignore
             .attr(
                 "fill-opacity",
+                // @ts-ignore
                 (d) => +this.labelVisible(d.current, this.chart.num_layers),
             )
-            // @ts-ignore
             .attr("transform", (d) =>
+                // @ts-ignore
                 this.labelTransform(d.current, this.radius),
             )
             // @ts-ignore
