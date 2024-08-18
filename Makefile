@@ -1,5 +1,4 @@
 SRC_TS_FILES = $(wildcard ts/*.ts)
-SRC_TS_FILES = $(wildcard ts/*.ts)
 SRC_JS_FILES = ${SRC_TS_FILES:.ts=.js}
 PUBLIC_JS_FILES = ${subst ts,public/js,$(SRC_JS_FILES)}
 
@@ -22,7 +21,7 @@ db:
 	./target/debug/ncdu_output_viewer new2.json
 	pg_ctl -D db stop
 
-$(PUBLIC_JS_FILES): $(SRC_JS_FILES) package.json
+$(PUBLIC_JS_FILES) &: $(SRC_JS_FILES) package.json
 	yarn webpack
 
 all: package.json db $(PUBLIC_JS_FILES)
