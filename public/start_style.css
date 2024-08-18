@@ -1,0 +1,141 @@
+/* Base Colors */
+:root {
+    --background: #1a1b26;
+    --foreground: #c0caf5;
+    --primary: #7aa2f7;
+    --secondary: #bb9af7;
+    --accent: #7dcfff;
+    --highlight: #ff9e64;
+    --error: #f7768e;
+    --success: #9ece6a;
+    --warning: #e0af68;
+    --info: #2ac3de;
+    --border: #3b4261;
+    --muted: #565f89;
+}
+
+/* General Styles */
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: "Fira Code", "Courier New", monospace;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--accent);
+}
+
+button {
+    background-color: var(--primary);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: var(--accent);
+}
+
+input, textarea {
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.5rem;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--primary);
+    margin: 0.5rem 0;
+}
+
+/* Alerts */
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+}
+
+.alert-success {
+    background-color: var(--success);
+    color: var(--background);
+}
+
+.alert-error {
+    background-color: var(--error);
+    color: var(--background);
+}
+
+.alert-warning {
+    background-color: var(--warning);
+    color: var(--background);
+}
+
+.alert-info {
+    background-color: var(--info);
+    color: var(--background);
+}
+
+/* Code Blocks */
+pre, code {
+    background-color: var(--muted);
+    color: var(--foreground);
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+}
+
+/* Borders and Dividers */
+hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0;
+}
+
+/* Form Elements */
+select {
+    background-color: var(--background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.5rem;
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+tspan {
+    fill: var(--primary);
+    /*font-family: "Fira Code", "Courier New", monospace;*/
+}
+
+tspan.highlight {
+    fill: var(--highlight);
+    font-weight: bold;
+}
+
+tspan.secondary {
+    fill: var(--secondary);
+}
+
+tspan.accent {
+    fill: var(--accent);
+}
+
+title {
+    color: var(--primary);
+}
