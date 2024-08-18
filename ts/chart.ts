@@ -1,3 +1,5 @@
+import * as d3 from "d3";
+
 class Chart {
     width = 1000;
     height = 750;
