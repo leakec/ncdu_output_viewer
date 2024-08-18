@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::process::{Command, Stdio};
 use humansize::{format_size, BINARY};
 use indicatif::{ProgressBar, ProgressStyle};
-//use memory_stats::memory_stats;
 
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
@@ -227,13 +226,6 @@ fn get_data(file: &PathBuf) -> Node
 }
 
 fn build_database(file: &PathBuf, xdu_output_file: Option<&String>, use_pbar: bool) {
-    //if let Some(usage) = memory_stats() {
-    //    println!("Current physical memory usage: {}", usage.physical_mem);
-    //    println!("Current virtual memory usage: {}", usage.virtual_mem);
-    //} else {
-    //    println!("Couldn't get the current memory usage :(");
-    //}
-
     // Create command to get number of lines
     let cmd = Command::new("wc").arg("-l").arg(file).stdout(Stdio::piped()).spawn().unwrap();
 
@@ -250,13 +242,6 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>, use_pbar: bo
         },
         false => (None, 0)
     };
-
-    //if let Some(usage) = memory_stats() {
-    //    println!("Current physical memory usage: {}", usage.physical_mem);
-    //    println!("Current virtual memory usage: {}", usage.virtual_mem);
-    //} else {
-    //    println!("Couldn't get the current memory usage :(");
-    //}
 
     // Create postgress batcher
     let mut pg_batch = PgBatch{
@@ -285,16 +270,6 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>, use_pbar: bo
         _ => ()
     }
 
-    //if let Some(usage) = memory_stats() {
-    //    println!("Current physical memory usage: {}", usage.physical_mem);
-    //    println!("Current virtual memory usage: {}", usage.virtual_mem);
-    //} else {
-    //    println!("Couldn't get the current memory usage :(");
-    //}
-    //match data {
-    //    Node::Data(_) => println!{"Still matching."},
-    //    Node::Array(_) => println!{"Still matching."},
-    //};
 }
 
 fn main() {
