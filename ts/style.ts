@@ -26,7 +26,7 @@ const tokyo_night_style: Style = {
     "--info": "#2ac3de",
     "--border": "#3b4261",
     "--muted": "#565f89",
-}
+};
 
 const catppuccin_style: Style = {
     "--background": "#1e1e2e",
@@ -41,44 +41,43 @@ const catppuccin_style: Style = {
     "--info": "#89dceb",
     "--border": "#585b70",
     "--muted": "#6e6c7e",
-}
+};
 
 class SetStyle {
-
     container;
 
     // For selecting the theme
     // @ts-ignore
     theme_select: HTMLSelectElement = document.createElement("Select");
     theme_type = "tokyo-night";
-    
-    _options: { [key: string]: Style} = {
+
+    _options: { [key: string]: Style } = {
         "tokyo-night": tokyo_night_style,
-        "catppuccin": catppuccin_style, 
-    }
+        catppuccin: catppuccin_style,
+    };
 
     constructor() {
         this.container = document.getElementById("container");
 
-        Object.keys(this._options).forEach( (option) => {
+        Object.keys(this._options).forEach((option) => {
             if (option == this.theme_type) {
-                this.theme_select.add( new Option(option, option, true, true) );
+                this.theme_select.add(new Option(option, option, true, true));
             } else {
-                this.theme_select.add( new Option(option, option) );
+                this.theme_select.add(new Option(option, option));
             }
         });
 
         this.theme_select.addEventListener("change", () => {
             let style: Style = this._options[this.theme_select.value];
-            Object.keys(style).forEach( (opt) => {
+            Object.keys(style).forEach((opt) => {
                 document.documentElement.style.setProperty(opt, style[opt]);
             });
         });
 
         this.theme_select.style.position = "absolute";
-        this.theme_select.style.top = '10px';
-        this.theme_select.style.left = '300px';
-        
+        this.theme_select.style.top = "10px";
+        this.theme_select.style.left = "300px";
+
         this.container.appendChild(this.theme_select);
     }
 }

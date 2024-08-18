@@ -1,6 +1,6 @@
 import * as d3 from "d3";
 
-class Chart{
+class Chart {
     width = 1000;
     height = 750;
     data;
@@ -32,53 +32,52 @@ class Chart{
     constructor() {
         this.container = document.getElementById("container");
         // For selecting the chart type
-        this.chart_type_select.add( new Option("icicle", "icicle", true, true) );
-        this.chart_type_select.add( new Option("sunburst", "sunburst") );
+        this.chart_type_select.add(new Option("icicle", "icicle", true, true));
+        this.chart_type_select.add(new Option("sunburst", "sunburst"));
         this.chart_type_select.addEventListener("change", () => {
             this.chart_type = this.chart_type_select.value;
             this.svg.node()!.remove();
-            if (this.chart_type == "icicle")
-            {
+            if (this.chart_type == "icicle") {
                 this.plot = new Icicle(this);
-            }
-            else
-            {
+            } else {
                 this.plot = new Sunburst(this);
             }
-            this.focus = this.root.descendants().find(d => d.data.id === this.focus.data.id);
-            this.plot.redraw()
+            this.focus = this.root
+                .descendants()
+                .find((d) => d.data.id === this.focus.data.id);
+            this.plot.redraw();
             this.container.append(this.svg.node());
         });
         this.chart_type_select.style.position = "absolute";
-        this.chart_type_select.style.top = '10px';
-        this.chart_type_select.style.left = '10px';
+        this.chart_type_select.style.top = "10px";
+        this.chart_type_select.style.left = "10px";
 
         // For selecting the data type
-        this.data_type_select.add( new Option("dsize", "dsize", true, true) );
-        this.data_type_select.add( new Option("asize", "asize") );
+        this.data_type_select.add(new Option("dsize", "dsize", true, true));
+        this.data_type_select.add(new Option("asize", "asize"));
         this.data_type_select.addEventListener("change", () => {
             this.data_type = this.data_type_select.value;
             this.data_type_h = this.data_type + "_h";
             this.plot.redraw();
         });
         this.data_type_select.style.position = "absolute";
-        this.data_type_select.style.top = '10px';
-        this.data_type_select.style.left = '120px';
+        this.data_type_select.style.top = "10px";
+        this.data_type_select.style.left = "120px";
 
-        this.num_layers_select.add( new Option("2", "2") );
-        this.num_layers_select.add( new Option("3", "3", true, true) );
-        this.num_layers_select.add( new Option("4", "4") );
-        this.num_layers_select.add( new Option("5", "5") );
-        this.num_layers_select.add( new Option("6", "6") );
+        this.num_layers_select.add(new Option("2", "2"));
+        this.num_layers_select.add(new Option("3", "3", true, true));
+        this.num_layers_select.add(new Option("4", "4"));
+        this.num_layers_select.add(new Option("5", "5"));
+        this.num_layers_select.add(new Option("6", "6"));
         this.num_layers_select.addEventListener("change", () => {
             this.num_layers = parseInt(this.num_layers_select.value);
-            this.modifyDataAtId(this.focus).then( (_) => {
+            this.modifyDataAtId(this.focus).then((_) => {
                 this.plot.redraw();
             });
         });
         this.num_layers_select.style.position = "absolute";
-        this.num_layers_select.style.top = '10px';
-        this.num_layers_select.style.left = '230px';
+        this.num_layers_select.style.top = "10px";
+        this.num_layers_select.style.left = "230px";
 
         this.container.append(this.chart_type_select);
         this.container.append(this.data_type_select);
@@ -86,22 +85,24 @@ class Chart{
     }
 
     async init() {
-        this.data = await this.getData(0, this.num_layers-1);
+        this.data = await this.getData(0, this.num_layers - 1);
         this.plot = new Icicle(this);
         this.container.append(this.svg.node());
     }
 
     async getData(nodeId, length) {
-        return fetch(`http://localhost:3000/node/${nodeId}/${length}`).then(x=>x.json()).then(data=>data['0']['get_child_as_json']);
+        return fetch(`http://localhost:3000/node/${nodeId}/${length}`)
+            .then((x) => x.json())
+            .then((data) => data["0"]["get_child_as_json"]);
     }
 
     computeHierarcy() {
         // Recompute the hierarchy and partition with the new data structure
-        this.hierarchy = d3.hierarchy(this.data)
+        this.hierarchy = d3.hierarchy(this.data);
 
         // Use the pre-computed data_type as the nodes value.
         // @ts-ignore
-        this.hierarchy.each(d => d.value = d.data![this.data_type]);
+        this.hierarchy.each((d) => (d.value = d.data![this.data_type]));
 
         // Compute colors based on the data
         this.color = d3.scaleOrdinal(
@@ -110,27 +111,30 @@ class Chart{
     }
 
     async modifyDataAtId(p) {
-        return this.getData(p.data.id, this.num_layers-1).then(new_data => {
-
+        return this.getData(p.data.id, this.num_layers - 1).then((new_data) => {
             // Append new data to the old data structure
             let dark = p;
-            const p_ids = []
-            while (dark.data.id != 0)
-            {
+            const p_ids = [];
+            while (dark.data.id != 0) {
                 // @ts-ignore
-                p_ids.push(dark.data.id); 
+                p_ids.push(dark.data.id);
                 dark = dark.parent;
             }
 
             let x = this.data;
-            p_ids.slice(1).reverse().forEach(p_id => {
-                let dark = x.child_ids.findIndex((element) => element == p_id);
-                x = x.children[dark];
-            });
+            p_ids
+                .slice(1)
+                .reverse()
+                .forEach((p_id) => {
+                    let dark = x.child_ids.findIndex(
+                        (element) => element == p_id,
+                    );
+                    x = x.children[dark];
+                });
 
             let dark2 = x.child_ids.findIndex((element) => element == p_ids[0]);
             x.children[dark2] = new_data;
-        })
+        });
     }
 }
 
@@ -142,8 +146,7 @@ class Icicle {
     tspan;
     old_focus_id;
 
-    constructor(chart: Chart)
-    {
+    constructor(chart: Chart) {
         this.chart = chart;
 
         this.chart.svg = d3
@@ -151,7 +154,10 @@ class Icicle {
             .attr("viewBox", [0, 0, this.chart.width, this.chart.height])
             .attr("width", this.chart.width)
             .attr("height", this.chart.height)
-            .attr("style", "max-width: 100%; height: auto; font: 10px sans-serif; position: absolute; top: 50px;");
+            .attr(
+                "style",
+                "max-width: 100%; height: auto; font: 10px sans-serif; position: absolute; top: 50px;",
+            );
 
         this.draw();
     }
@@ -168,12 +174,16 @@ class Icicle {
 
     draw() {
         // Recompute hierarcy for data
-        this.chart.computeHierarcy()
+        this.chart.computeHierarcy();
 
         this.chart.root = d3
             .partition()
             // @ts-ignore
-            .size([this.chart.height, ((this.chart.hierarchy.height + 1) * this.chart.width) / this.chart.num_layers])(this.chart.hierarchy);
+            .size([
+                this.chart.height,
+                ((this.chart.hierarchy.height + 1) * this.chart.width) /
+                    this.chart.num_layers,
+            ])(this.chart.hierarchy);
 
         // Append cells.
         this.cell = this.chart.svg
@@ -191,44 +201,43 @@ class Icicle {
             .attr("y", 13)
             .attr("fill-opacity", (d) => +this.labelVisible(d));
 
-        this.rect = this.cell.append("rect")
+        this.rect = this.cell
+            .append("rect")
             .attr("width", (d) => d.y1 - d.y0 - 1)
             .attr("height", (d) => this.rectHeight(d))
-            .attr("fill-opacity", (d) => d.data.leaf ? 0.4 : 0.6)
+            .attr("fill-opacity", (d) => (d.data.leaf ? 0.4 : 0.6))
             .attr("fill", (d) => {
                 if (!d.depth) return "#ccc";
                 while (d.depth > 1) d = d.parent;
                 return this.chart.color(d.data.name);
             })
-            .style("cursor", "pointer")
+            .style("cursor", "pointer");
 
         this.text.append("tspan").text((d) => d.data.name);
 
-        this.tspan = this.text.append("tspan")
+        this.tspan = this.text
+            .append("tspan")
             // @ts-ignore
             .attr("fill-opacity", (d) => this.labelVisible(d) * 0.7)
             .text((d) => " " + d.data[this.chart.data_type_h]);
 
         this.cell.append("title").text(
             (d) =>
-            `${d.ancestors()
-                .map((d) => d.data.name)
-                .reverse()
-                .join("/")}\n ${d.data[this.chart.data_type_h]}`,
-
+                `${d
+                    .ancestors()
+                    .map((d) => d.data.name)
+                    .reverse()
+                    .join("/")}\n ${d.data[this.chart.data_type_h]}`,
         );
 
-        if (this.chart.focus == null)
-        {
+        if (this.chart.focus == null) {
             this.chart.focus = this.chart.root;
         }
 
         const clicked = (_, p) => {
             this.old_focus_id = this.chart.focus.data.id;
-            if (this.chart.focus.data.id == p.data.id)
-            {
-                if (p.parent == null)
-                {
+            if (this.chart.focus.data.id == p.data.id) {
+                if (p.parent == null) {
                     // If the parent is null, we are at the root. Do nothing.
                     return;
                 }
@@ -238,20 +247,19 @@ class Icicle {
                 this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
 
                 this.transition(p, 750);
-            }
-            else
-            {
+            } else {
                 // Early out if this is a leaf. Don't transition.
-                if (p.data.leaf)
-                {
+                if (p.data.leaf) {
                     return;
                 }
 
                 // Going down the tree is complicated. Get new data. Redraw the current graph and then transition.
                 this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
-                this.chart.modifyDataAtId(p).then( (_) => {
+                this.chart.modifyDataAtId(p).then((_) => {
                     // Redraw the chart at the old focus
-                    let dark3 = this.chart.root.descendants().find(d => d.data.id === this.old_focus_id);
+                    let dark3 = this.chart.root
+                        .descendants()
+                        .find((d) => d.data.id === this.old_focus_id);
                     this.redraw(dark3).then(() => {
                         // Transition to the new spot
                         this.transition(p, 750);
@@ -263,9 +271,8 @@ class Icicle {
         this.rect.on("click", clicked);
     }
 
-    async redraw(focus=null) {
-        if (focus == null)
-        {
+    async redraw(focus = null) {
+        if (focus == null) {
             focus = this.chart.focus;
         }
         this.chart.svg.selectAll("g").remove();
@@ -277,12 +284,12 @@ class Icicle {
         // Target the new focus
         this.chart.root.each(
             (d) =>
-            (d.target = {
-                x0: ((d.x0 - p.x0) / (p.x1 - p.x0)) * this.chart.height,
-                x1: ((d.x1 - p.x0) / (p.x1 - p.x0)) * this.chart.height,
-                y0: d.y0 - p.y0,
-                y1: d.y1 - p.y0,
-            }),
+                (d.target = {
+                    x0: ((d.x0 - p.x0) / (p.x1 - p.x0)) * this.chart.height,
+                    x1: ((d.x1 - p.x0) / (p.x1 - p.x0)) * this.chart.height,
+                    y0: d.y0 - p.y0,
+                    y1: d.y1 - p.y0,
+                }),
         );
 
         const t = this.cell
@@ -294,14 +301,22 @@ class Icicle {
             );
 
         // @ts-ignore
-        let p1 = this.rect.transition(t).attr("height", (d) => this.rectHeight(d.target)).end();
+        let p1 = this.rect
+            .transition(t)
+            .attr("height", (d) => this.rectHeight(d.target))
+            .end();
         // @ts-ignore
-        let p2 = this.text.transition(t).attr("fill-opacity", (d) => +this.labelVisible(d.target)).end();
+        let p2 = this.text
+            .transition(t)
+            .attr("fill-opacity", (d) => +this.labelVisible(d.target))
+            .end();
         // @ts-ignore
-        let p3 = this.tspan.transition(t).attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7).end();
+        let p3 = this.tspan
+            .transition(t)
+            .attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7)
+            .end();
         return Promise.all([p1, p2, p3]);
     }
-
 }
 
 class Sunburst {
@@ -313,33 +328,45 @@ class Sunburst {
     center;
     radius = 0.0;
 
-    constructor(chart)
-    {
+    constructor(chart) {
         this.chart = chart;
 
         this.chart.svg = d3
             .create("svg")
-            .attr("viewBox", [-this.chart.width / 2, -this.chart.height / 2, this.chart.width, this.chart.width])
-            .attr("style", "font: 10px sans-serif; position: absolute; top: 50px;");
+            .attr("viewBox", [
+                -this.chart.width / 2,
+                -this.chart.height / 2,
+                this.chart.width,
+                this.chart.width,
+            ])
+            .attr(
+                "style",
+                "font: 10px sans-serif; position: absolute; top: 50px;",
+            );
 
         this.draw();
     }
 
     draw() {
         // Compute the radius
-        this.radius = Math.min(this.chart.width, this.chart.height) / (this.chart.num_layers*2);
+        this.radius =
+            Math.min(this.chart.width, this.chart.height) /
+            (this.chart.num_layers * 2);
 
         // Recompute hierarcy for data
-        this.chart.computeHierarcy()
+        this.chart.computeHierarcy();
 
         // TODO: Need to add num layers to this.
-        this.chart.root = d3.partition().size([2 * Math.PI, this.chart.hierarchy.height + 1])(this.chart.hierarchy);
+        this.chart.root = d3
+            .partition()
+            .size([2 * Math.PI, this.chart.hierarchy.height + 1])(
+            this.chart.hierarchy,
+        );
 
         // TODO: Do we need this?
         this.chart.root.each((d) => (d.current = d));
 
-        if (this.chart.focus == null)
-        {
+        if (this.chart.focus == null) {
             this.chart.focus = this.chart.root;
         }
 
@@ -355,7 +382,9 @@ class Sunburst {
             // @ts-ignore
             .innerRadius((d) => d.y0 * this.radius)
             // @ts-ignore
-            .outerRadius((d) => Math.max(d.y0 * this.radius, d.y1 * this.radius - 1));
+            .outerRadius((d) =>
+                Math.max(d.y0 * this.radius, d.y1 * this.radius - 1),
+            );
 
         this.path = this.chart.svg
             .append("g")
@@ -370,11 +399,17 @@ class Sunburst {
             })
             .attr("fill-opacity", (d) =>
                 // @ts-ignore
-                this.arcVisible(d.current, this.chart.num_layers) ? (d.data.leaf ? 0.4 : 0.6) : 0,
+                this.arcVisible(d.current, this.chart.num_layers)
+                    ? d.data.leaf
+                        ? 0.4
+                        : 0.6
+                    : 0,
             )
             .attr("pointer-events", (d) =>
                 // @ts-ignore
-                this.arcVisible(d.current, this.chart.num_layers) ? "auto" : "none",
+                this.arcVisible(d.current, this.chart.num_layers)
+                    ? "auto"
+                    : "none",
             )
             // @ts-ignore
             .attr("d", (d) => this.arc(d.current))
@@ -382,7 +417,8 @@ class Sunburst {
 
         this.path.append("title").text(
             (d) =>
-                `${d.ancestors()
+                `${d
+                    .ancestors()
                     .map((d) => d.data.name)
                     .reverse()
                     .join("/")}\n ${d.data[this.chart.data_type_h]}`,
@@ -398,9 +434,14 @@ class Sunburst {
             .join("text")
             .attr("dy", "0.35em")
             // @ts-ignore
-            .attr("fill-opacity", (d) => +this.labelVisible(d.current, this.chart.num_layers))
+            .attr(
+                "fill-opacity",
+                (d) => +this.labelVisible(d.current, this.chart.num_layers),
+            )
             // @ts-ignore
-            .attr("transform", (d) => this.labelTransform(d.current, this.radius))
+            .attr("transform", (d) =>
+                this.labelTransform(d.current, this.radius),
+            )
             // @ts-ignore
             .text((d) => d.data.name);
 
@@ -412,10 +453,8 @@ class Sunburst {
             .attr("pointer-events", "all");
 
         const clicked = (_, p) => {
-            if (this.chart.focus.data.id == p.data.id)
-            {
-                if (p.parent == null)
-                {
+            if (this.chart.focus.data.id == p.data.id) {
+                if (p.parent == null) {
                     // If the parent is null, we are at the root. Do nothing.
                     return;
                 }
@@ -424,59 +463,68 @@ class Sunburst {
                 this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
 
                 this.transition(p, 750);
-            }
-            else
-            {
+            } else {
                 // Early out if this is a leaf. Don't transition.
-                if (p.data.leaf)
-                {
+                if (p.data.leaf) {
                     return;
                 }
 
                 // Going down the tree is complicated. Get new data. Redraw the current graph and then transition.
-                this.chart.getData(p.data.id, this.chart.num_layers-1).then(new_data => {
-                    if (new_data.children != null && new_data.children.length != 0)
-                    {
-                        this.center.datum(p.parent || this.chart.root);
-                        const old_focus_id = this.chart.focus.data.id;
-                        this.chart.focus = this.chart.focus === p ? (p = p.parent) : p;
+                this.chart
+                    .getData(p.data.id, this.chart.num_layers - 1)
+                    .then((new_data) => {
+                        if (
+                            new_data.children != null &&
+                            new_data.children.length != 0
+                        ) {
+                            this.center.datum(p.parent || this.chart.root);
+                            const old_focus_id = this.chart.focus.data.id;
+                            this.chart.focus =
+                                this.chart.focus === p ? (p = p.parent) : p;
 
-                        // Append new data to the old data structure
-                        let dark = p;
-                        const p_ids = []
-                        while (dark.data.id != 0)
-                        {
-                            // @ts-ignore
-                            p_ids.push(dark.data.id);
-                            dark = dark.parent;
+                            // Append new data to the old data structure
+                            let dark = p;
+                            const p_ids = [];
+                            while (dark.data.id != 0) {
+                                // @ts-ignore
+                                p_ids.push(dark.data.id);
+                                dark = dark.parent;
+                            }
+
+                            let x = this.chart.data;
+                            p_ids
+                                .slice(1)
+                                .reverse()
+                                .forEach((p_id) => {
+                                    let dark = x.child_ids.findIndex(
+                                        (element) => element == p_id,
+                                    );
+                                    x = x.children[dark];
+                                });
+
+                            let dark2 = x.child_ids.findIndex(
+                                (element) => element == p_ids[0],
+                            );
+                            x.children[dark2] = new_data;
+
+                            // Redraw the chart at the old focus
+                            let dark3 = this.chart.root
+                                .descendants()
+                                .find((d) => d.data.id === old_focus_id);
+                            this.redraw(dark3).then(() => {
+                                this.transition(p, 750);
+                            });
                         }
-
-                        let x = this.chart.data;
-                        p_ids.slice(1).reverse().forEach(p_id => {
-                            let dark = x.child_ids.findIndex((element) => element == p_id);
-                            x = x.children[dark];
-                        });
-
-                        let dark2 = x.child_ids.findIndex((element) => element == p_ids[0]);
-                        x.children[dark2] = new_data;
-
-                        // Redraw the chart at the old focus
-                        let dark3 = this.chart.root.descendants().find(d => d.data.id === old_focus_id);
-                        this.redraw(dark3).then(() => {
-                            this.transition(p, 750);
-                        });
-                    }
-                });
+                    });
             }
-        }
+        };
 
         this.center.on("click", clicked);
         this.path.on("click", clicked);
     }
 
-    async redraw(focus=null) {
-        if (focus == null)
-        {
+    async redraw(focus = null) {
+        if (focus == null) {
             focus = this.chart.focus;
         }
         this.chart.svg.selectAll("g").remove();
@@ -515,7 +563,8 @@ class Sunburst {
         // Transition the data on all arcs, even the ones that aren’t visible,
         // so that if this transition is interrupted, entering arcs will start
         // the next transition from the desired position.
-        let p1 = this.path.transition(t)
+        let p1 = this.path
+            .transition(t)
             .tween("data", (d) => {
                 const i = d3.interpolate(d.current, d.target);
                 return (t) => (d.current = i(t));
@@ -533,7 +582,8 @@ class Sunburst {
                 arcVisible(d.target) ? "auto" : "none",
             )
 
-            .attrTween("d", (d) => () => this.arc(d.current)).end();
+            .attrTween("d", (d) => () => this.arc(d.current))
+            .end();
 
         let p2 = this.label
             .filter(function (d) {
@@ -543,9 +593,10 @@ class Sunburst {
             })
             .transition(t)
             .attr("fill-opacity", (d) => +labelVisible(d.target))
-            .attrTween("transform", (d) => () => labelTransform(d.current)).end();
+            .attrTween("transform", (d) => () => labelTransform(d.current))
+            .end();
 
-       return Promise.all([p1, p2])
+        return Promise.all([p1, p2]);
     }
 
     arcVisible(d, num_layers) {
@@ -553,7 +604,11 @@ class Sunburst {
     }
 
     labelVisible(d, num_layers) {
-        return d.y1 <= num_layers && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
+        return (
+            d.y1 <= num_layers &&
+            d.y0 >= 1 &&
+            (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03
+        );
     }
 
     labelTransform(d, radius) {
