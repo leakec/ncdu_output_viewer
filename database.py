@@ -7,7 +7,7 @@ from typing import Dict, Any, Tuple
 dirs_only = True
 
 # Load JSON data into a DataFrame
-with open("new2.json") as f:
+with open("dlab4.json") as f:
     data = json.load(f)[3]
 
 # Connect to PostgreSQL
