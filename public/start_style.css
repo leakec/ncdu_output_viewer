@@ -67,6 +67,11 @@ h5,
 h6 {
     color: var(--primary);
     margin: 0.5rem 0;
+    text-shadow: 0 0 0.5em;
+}
+
+.my-container {
+    display: flex;
 }
 
 /* Alerts */
@@ -119,6 +124,8 @@ select {
     color: var(--foreground);
     border: 1px solid var(--border);
     padding: 0.5rem;
+    margin: 5px;
+    border-radius: 10px;
 }
 
 select:focus {
@@ -127,8 +134,10 @@ select:focus {
 }
 
 tspan {
-    fill: var(--primary);
-    /*font-family: "Fira Code", "Courier New", monospace;*/
+    fill: var(--foreground);
+    font-family: "Fira Code", "Courier New", monospace;
+    font-weight: bold;
+    font-size: 12px;
 }
 
 tspan.highlight {
@@ -144,6 +153,9 @@ tspan.accent {
     fill: var(--accent);
 }
 
-title {
-    color: var(--primary);
+.label-text {
+    fill: var(--foreground);
+    font-family: "Fira Code", "Courier New", monospace;
+    font-weight: bold;
+    font-size: 12px;
 }

@@ -48,9 +48,6 @@ class Chart {
             this.plot.redraw();
             this.container.append(this.svg.node());
         });
-        this.chart_type_select.style.position = "absolute";
-        this.chart_type_select.style.top = "10px";
-        this.chart_type_select.style.left = "10px";
 
         // For selecting the data type
         this.data_type_select.add(new Option("dsize", "dsize", true, true));
@@ -60,9 +57,6 @@ class Chart {
             this.data_type_h = this.data_type + "_h";
             this.plot.redraw();
         });
-        this.data_type_select.style.position = "absolute";
-        this.data_type_select.style.top = "10px";
-        this.data_type_select.style.left = "120px";
 
         this.num_layers_select.add(new Option("2", "2"));
         this.num_layers_select.add(new Option("3", "3", true, true));
@@ -75,9 +69,6 @@ class Chart {
                 this.plot.redraw();
             });
         });
-        this.num_layers_select.style.position = "absolute";
-        this.num_layers_select.style.top = "10px";
-        this.num_layers_select.style.left = "230px";
 
         this.container.append(this.chart_type_select);
         this.container.append(this.data_type_select);
@@ -218,7 +209,7 @@ class Icicle {
         this.tspan = this.text
             .append("tspan")
             // @ts-ignore
-            .attr("fill-opacity", (d) => this.labelVisible(d) * 0.7)
+            .attr("fill-opacity", (d) => this.labelVisible(d))
             .text((d) => " " + d.data[this.chart.data_type_h]);
 
         this.cell.append("title").text(
@@ -313,7 +304,7 @@ class Icicle {
         let p3 = this.tspan
             .transition(t)
             // @ts-ignore
-            .attr("fill-opacity", (d) => this.labelVisible(d.target) * 0.7)
+            .attr("fill-opacity", (d) => this.labelVisible(d.target))
             .end();
         return Promise.all([p1, p2, p3]);
     }
@@ -341,7 +332,7 @@ class Sunburst {
             ])
             .attr(
                 "style",
-                "font: 10px sans-serif; position: absolute; top: 50px;",
+                "max-width: 100%; height: auto; font: 10px sans-serif; position: absolute; top: 50px;",
             );
 
         this.draw();
@@ -351,7 +342,7 @@ class Sunburst {
         // Compute the radius
         this.radius =
             Math.min(this.chart.width, this.chart.height) /
-            (this.chart.num_layers * 2);
+            (this.chart.num_layers * 2.3);
 
         // Recompute hierarcy for data
         this.chart.computeHierarcy();
@@ -429,6 +420,7 @@ class Sunburst {
             .append("g")
             .attr("pointer-events", "none")
             .attr("text-anchor", "middle")
+            .classed("label-text", true)
             .style("user-select", "none")
             .selectAll("text")
             .data(this.chart.root.descendants().slice(1))

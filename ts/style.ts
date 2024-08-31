@@ -43,6 +43,21 @@ const catppuccin_style: Style = {
     "--muted": "#6e6c7e",
 };
 
+const rose_pine: Style = {
+    "--background": "#191724",
+    "--foreground": "#e0def4",
+    "--primary": "#eb6f92",
+    "--secondary": "#f6c177",
+    "--accent": "#9ccfd8",
+    "--highlight": "#c4a7e7",
+    "--error": "#eb6f92",
+    "--success": "#31748f",
+    "--warning": "#f6c177",
+    "--info": "#9ccfd8",
+    "--border": "#6e6a86",
+    "--muted": "#908caa",
+}
+
 class SetStyle {
     container;
 
@@ -53,7 +68,8 @@ class SetStyle {
 
     _options: { [key: string]: Style } = {
         "tokyo-night": tokyo_night_style,
-        catppuccin: catppuccin_style,
+        "catppuccin": catppuccin_style,
+        "rose-pine": rose_pine,
     };
 
     constructor() {
@@ -73,10 +89,6 @@ class SetStyle {
                 document.documentElement.style.setProperty(opt, style[opt]);
             });
         });
-
-        this.theme_select.style.position = "absolute";
-        this.theme_select.style.top = "10px";
-        this.theme_select.style.left = "300px";
 
         this.container.appendChild(this.theme_select);
     }
