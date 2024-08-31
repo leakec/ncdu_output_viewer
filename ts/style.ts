@@ -56,7 +56,7 @@ const rose_pine: Style = {
     "--info": "#9ccfd8",
     "--border": "#6e6a86",
     "--muted": "#908caa",
-}
+};
 
 class SetStyle {
     container;
@@ -68,7 +68,7 @@ class SetStyle {
 
     _options: { [key: string]: Style } = {
         "tokyo-night": tokyo_night_style,
-        "catppuccin": catppuccin_style,
+        catppuccin: catppuccin_style,
         "rose-pine": rose_pine,
     };
 

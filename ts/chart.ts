@@ -391,8 +391,8 @@ class Sunburst {
             .attr("fill-opacity", (d) =>
                 // @ts-ignore
                 this.arcVisible(d.current, this.chart.num_layers)
-                    // @ts-ignore
-                    ? d.data.leaf
+                    ? // @ts-ignore
+                      d.data.leaf
                         ? 0.4
                         : 0.6
                     : 0,
