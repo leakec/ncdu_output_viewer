@@ -6,7 +6,12 @@ public/js
 ts/*.js
 yarn.lock
 
+# For packaging
+packaging/rpmbuild/SOURCES/
+packaging/rpmbuild/RPMS/
+packaging/rpmbuild/SRPMS/
+dist
+
 
 # Added by cargo
-
 /target
