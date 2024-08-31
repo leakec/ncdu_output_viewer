@@ -12,7 +12,7 @@ fn main() -> Result<(), Error> {
     };
     let mut cmd = build_cli();
     for &shell in Shell::value_variants() {
-        generate_to(shell, &mut cmd, "ncdu_output_viewer", outdir.clone())?;
+        generate_to(shell, &mut cmd, "ncdu-output-viewer", outdir.clone())?;
     }
 
     Ok(())

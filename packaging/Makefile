@@ -7,6 +7,8 @@ binary=../target/release/ncdu-output-viewer
 SRC_TS_FILES = $(wildcard ../ts/*.ts)
 template_project = ../template_project
 
+$(info $(SRC_TS_FILES))
+
 FORCE: 
 ../dist:
 	mkdir -p ../dist
@@ -18,7 +20,7 @@ $(binary): FORCE
 $(RPM) : $(binary) $(SRC_TS_FILES) ../dist $(template_project)
 	sed -i 's/Version:.*/Version: $(VERSION)/g' rpmbuild/SPECS/ncdu-output-viewer.spec
 	mkdir -p rpmbuild/SOURCES;
-	cd rpmbuild/SOURCES; mkdir -p ncdu-output-viewer-$(VERSION); cd ncdu-output-viewer-$(VERSION); cp ../../../$(binary) .; cp -r ../../../$(template_project) .; mkdir -p template_project/ts; cp ../../../$(SRC_TS_FILES) template_project/ts; cd ..; tar -czvf ncdu-output-viewer-$(VERSION).tar.gz ncdu-output-viewer-$(VERSION); rm -rf ncdu-output-viewer-$(VERSION)
+	cd rpmbuild/SOURCES; mkdir -p ncdu-output-viewer-$(VERSION); cd ncdu-output-viewer-$(VERSION); cp ../../../$(binary) .; cp ../../../../target/release/build/ncdu-output-viewer-dd64a519e80d50f0/out/_ncdu-output-viewer .; cp ../../../../target/release/build/ncdu-output-viewer-dd64a519e80d50f0/out/ncdu-output-viewer.bash .; cp -r ../../../$(template_project) .; mkdir -p template_project/ts; cp ../../../../ts/*.ts template_project/ts; cd ..; tar -czvf ncdu-output-viewer-$(VERSION).tar.gz ncdu-output-viewer-$(VERSION); rm -rf ncdu-output-viewer-$(VERSION)
 	cd rpmbuild; rpmbuild --define "_topdir `pwd`" -ba SPECS/ncdu-output-viewer.spec
 	cp rpmbuild/RPMS/x86_64/ncdu-output-viewer-* ../dist/
 
