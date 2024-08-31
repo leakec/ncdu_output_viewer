@@ -18,7 +18,7 @@ db:
 	pg_ctl -D db start
 	psql -h localhost -d postgres -c "CREATE DATABASE database;"
 	psql -h localhost -d database -f database.sql
-	./target/debug/ncdu_output_viewer new2.json
+	./target/debug/ncdu_output_viewer data.json
 	pg_ctl -D db stop
 
 $(PUBLIC_JS_FILES) &: $(SRC_JS_FILES) package.json
