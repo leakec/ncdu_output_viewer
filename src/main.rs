@@ -2,6 +2,7 @@ mod cli;
 
 use serde::Deserialize;
 use std::path::PathBuf;
+use std::str::FromStr;
 use postgres::{Client, NoTls};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::process::{Command, Stdio};
@@ -9,7 +10,7 @@ use humansize::{format_size, BINARY};
 use indicatif::{ProgressBar, ProgressStyle};
 //use memory_stats::memory_stats;
 
-use std::fs::File;
+use std::fs::{File, create_dir_all};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 
 #[derive(Deserialize, Debug)]
@@ -298,33 +299,85 @@ fn build_database(file: &PathBuf, xdu_output_file: Option<&String>, use_pbar: bo
 }
 
 fn main() {
-    let matches = cli::build_cli().get_matches();
+    let main_matches = cli::build_cli().get_matches();
 
-    // DIRS_ONLY is the opposite of store_files
-    DIRS_ONLY.store(
-        match matches.get_one::<bool>("store_files") {
+    if let Some(matches) = main_matches.subcommand_matches("create-project") {
+        let dir = match matches.get_one::<String>("dir") {
+            Some(dir) => PathBuf::from(dir),
+            _ => panic!{"No directory specified"},
+        };
+
+        let file = match matches.get_one::<String>("file") {
+            Some(file) => PathBuf::from(file),
+            _ => panic!{"No file specified"},
+        };
+
+        let dark = dir.join(PathBuf::from("data.json"));
+
+        // Create the requested directory if it doesn't exist
+        let _ = create_dir_all(dir.clone());
+
+        // Create a symbolic link between the given data file and data.json in the project
+        Command::new("ln").arg("-s").arg(file.to_str().unwrap()).arg(dark.to_str().unwrap()).output().expect("Failed to create symbolic link");
+        
+        // Copy files from the template project into the directory
+        Command::new("cp").arg("-r").arg("/usr/local/ncdu-output-viewer/template_project/*").arg(dir.to_str().unwrap()).output().expect("Cannot copy files from template project.");
+    }
+
+    if let Some(matches) = main_matches.subcommand_matches("build-db") {
+
+        // DIRS_ONLY is the opposite of store_files
+        DIRS_ONLY.store(
+            match matches.get_one::<bool>("store_files") {
+                Some(val) => !val,
+                _ => false
+            }, Ordering::SeqCst);
+
+        // We want to create the database
+        CREATE_DATABASE.store(true, Ordering::SeqCst);
+
+        // use_pbar is the opposite of no_progress
+        let use_pbar = match matches.get_one::<bool>("no_pbar") {
             Some(val) => !val,
-            _ => false
-        }, Ordering::SeqCst);
+            _ => true
+        };
 
-    // CREATE_DATABASE is the opposite of no_database
-    CREATE_DATABASE.store(
-        match matches.get_one::<bool>("no_database") {
+        let xdu_output_file = None;
+
+
+        // Get the file that contains the data to put in the database
+        match matches.get_one::<String>("file") {
+            Some(file) => build_database(&PathBuf::from(file), xdu_output_file, use_pbar),
+            _ => panic!{"No file specified"},
+        };
+    }
+
+    if let Some(matches) = main_matches.subcommand_matches("xdu") {
+
+        let file = match matches.get_one::<String>("file") {
+            Some(file) => PathBuf::from(file),
+            _ => panic!{"No file specified"},
+        };
+
+        // Get the xdu_output_file if it was specified
+        let xdu_output_file = match matches.get_one::<String>("output_file") {
+            Some(val) => Some(val.to_owned()),
+            None => Some(String::from_str("xdu-").unwrap() + file.to_str().unwrap()),
+        };
+
+        // use_pbar is the opposite of no_progress
+        let use_pbar = match matches.get_one::<bool>("no_pbar") {
             Some(val) => !val,
-            _ => true }, Ordering::SeqCst);
+            _ => true
+        };
 
-    // Get the xdu_output_file if it was specified
-    let xdu_output_file = matches.get_one::<String>("xdu_output_file");
+        // DIRS_ONLY should be true for xdu output
+        DIRS_ONLY.store(true, Ordering::SeqCst);
 
-    // use_pbar is the opposite of no_progress
-    let use_pbar = match matches.get_one::<bool>("no_pbar") {
-        Some(val) => !val,
-        _ => true
-    };
+        // We do not want to create the database
+        CREATE_DATABASE.store(false, Ordering::SeqCst);
 
-    // Get the file that contains the data to put in the database
-    match matches.get_one::<String>("file") {
-        Some(file) => build_database(&PathBuf::from(file), xdu_output_file, use_pbar),
-        _ => panic!{"No file specified"},
-    };
+        build_database(&PathBuf::from(file), xdu_output_file.as_ref(), use_pbar)
+    }
+
 }
