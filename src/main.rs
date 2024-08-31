@@ -320,17 +320,13 @@ fn main() {
         let _ = create_dir_all(dir.clone());
 
         // Copy template project to new directory
-        Command::new("rsync").arg("-a").arg("/usr/local/ncdu-output-viewer/template_project/").arg(dir.to_str().unwrap()).output();
+        Command::new("rsync").arg("-a").arg("/usr/local/ncdu-output-viewer/template_project/").arg(dir.to_str().unwrap()).output().expect("Failed to copy files.");
 
         // Create a symbolic link between the given data file and data.json in the project
         Command::new("ln").arg("-s").arg(file.to_str().unwrap()).arg(dark.to_str().unwrap()).output().expect("Failed to create symbolic link");
         
-        // Copy files from the template project into the directory
-        let out = Command::new("cp").arg("-r").arg("/usr/local/ncdu-output-viewer/template_project/").arg(dir.to_str().unwrap()).output();
-        match out {
-            Err(e) => eprintln!{"{}", e},
-            Ok(val) => println!{"{}", String::from_utf8(val.stdout).unwrap()}
-        }
+        // Let the user know they should run make all
+        println!{"Project created at {}. Please go to that directory and run make all to view your files.", dir.to_str().unwrap()};
     }
 
     if let Some(matches) = main_matches.subcommand_matches("build-db") {
