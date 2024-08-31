@@ -10,7 +10,7 @@ use humansize::{format_size, BINARY};
 use indicatif::{ProgressBar, ProgressStyle};
 //use memory_stats::memory_stats;
 
-use std::fs::{File, create_dir_all};
+use std::fs::{File, create_dir_all, canonicalize};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 
 #[derive(Deserialize, Debug)]
@@ -307,21 +307,30 @@ fn main() {
             _ => panic!{"No directory specified"},
         };
 
-        let file = match matches.get_one::<String>("file") {
+        let mut file = match matches.get_one::<String>("file") {
             Some(file) => PathBuf::from(file),
             _ => panic!{"No file specified"},
         };
+
+        file = canonicalize(&file).unwrap();
 
         let dark = dir.join(PathBuf::from("data.json"));
 
         // Create the requested directory if it doesn't exist
         let _ = create_dir_all(dir.clone());
 
+        // Copy template project to new directory
+        Command::new("rsync").arg("-a").arg("/usr/local/ncdu-output-viewer/template_project/").arg(dir.to_str().unwrap()).output();
+
         // Create a symbolic link between the given data file and data.json in the project
         Command::new("ln").arg("-s").arg(file.to_str().unwrap()).arg(dark.to_str().unwrap()).output().expect("Failed to create symbolic link");
         
         // Copy files from the template project into the directory
-        Command::new("cp").arg("-r").arg("/usr/local/ncdu-output-viewer/template_project/*").arg(dir.to_str().unwrap()).output().expect("Cannot copy files from template project.");
+        let out = Command::new("cp").arg("-r").arg("/usr/local/ncdu-output-viewer/template_project/").arg(dir.to_str().unwrap()).output();
+        match out {
+            Err(e) => eprintln!{"{}", e},
+            Ok(val) => println!{"{}", String::from_utf8(val.stdout).unwrap()}
+        }
     }
 
     if let Some(matches) = main_matches.subcommand_matches("build-db") {
