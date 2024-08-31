@@ -21,7 +21,7 @@ rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT/usr/bin
 install ncdu-output-viewer $RPM_BUILD_ROOT/usr/bin/ncdu-output-viewer
 install -d $RPM_BUILD_ROOT/usr/local/ncdu-output-viewer
-install template_project $RPM_BUILD_ROOT/usr/local/ncdu-output-viewer/template_project
+cp -r template_project $RPM_BUILD_ROOT/usr/local/ncdu-output-viewer/template_project
 
 %files
 /usr/bin/ncdu-output-viewer
