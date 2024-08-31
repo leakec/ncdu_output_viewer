@@ -1,4 +1,4 @@
-use clap::{Command, ValueHint, Arg, ArgAction, Subcommand};
+use clap::{Command, ValueHint, Arg, ArgAction};
 
 pub fn build_cli() -> Command {
     Command::new("main")
