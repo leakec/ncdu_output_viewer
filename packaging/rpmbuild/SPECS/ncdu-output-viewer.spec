@@ -7,7 +7,7 @@ License:        MIT
 URL:           https://dartsgitlab-internal.jpl.nasa.gov/leake/rust_open_connect
 Source0:        ncdu-output-viewer-%{version}.tar.gz
 
-Requires: openconnect
+Requires: yarnpkg, make, nodejs >= 16, postgresql-server, postgresql-contrib
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
