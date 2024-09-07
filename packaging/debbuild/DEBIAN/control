@@ -1,0 +1,6 @@
+Package: ncdu-output-viewer
+Version: 0.1
+Architecture: all
+Maintainer: Carl Leake <leakec57@gmail.com>
+Description: NCDU output viewer.
+Depends: nodejs (>= 16), yarn, make, postgresql

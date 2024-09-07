@@ -1,13 +1,15 @@
 # Get version from the version.py file
 VERSION = 0.1
 
-RPM_PKG=ncdu-output-viewer-$(VERSION)-1.fc40.x86_64.rpm
-RPM=../dist/$(RPM_PKG)
 binary=../target/release/ncdu-output-viewer
 SRC_TS_FILES = $(wildcard ../ts/*.ts)
 template_project = ../template_project
 
-$(info $(SRC_TS_FILES))
+RPM_PKG=ncdu-output-viewer-$(VERSION)-1.fc40.x86_64.rpm
+RPM=../dist/$(RPM_PKG)
+
+DEB_PKG=ncdu-output-viewer_$(VERSION)-1_all
+DEB=../dist/$(DEB_PKG).deb
 
 FORCE: 
 ../dist:
@@ -24,16 +26,41 @@ $(RPM) : $(binary) $(SRC_TS_FILES) ../dist $(template_project)
 	cd rpmbuild; rpmbuild --define "_topdir `pwd`" -ba SPECS/ncdu-output-viewer.spec
 	cp rpmbuild/RPMS/x86_64/ncdu-output-viewer-* ../dist/
 
-rpm : $(RPM)
+$(DEB) : $(binary) $(SRC_TS_FILES) ../dist $(template_project)
+	sed -i 's/Version:.*/Version: $(VERSION)/g' debbuild/DEBIAN/control
+	mkdir -p debbuild/$(DEB_PKG)
+	mkdir -p debbuild/usr/bin
+	mkdir -p debbuild/usr/local/ncdu-output-viewer
+	mkdir -p debbuild/usr/share/bash-completions/completions
+	mkdir -p debbuild/usr/share/zsh/functions/Completion
+	mkdir -p debbuild/usr/share/zsh/site-functions
+	cp $(binary) debbuild/usr/bin
+	cp -r $(template_project) debbuild/usr/local/ncdu-output-viewer
+	cp ../target/release/build/ncdu-output-viewer-dd64a519e80d50f0/out/ncdu-output-viewer.bash debbuild/usr/share/bash-completions/completions
+	cp ../target/release/build/ncdu-output-viewer-dd64a519e80d50f0/out/_ncdu-output-viewer debbuild/usr/share/zsh/functions/Completion
+	cp ../target/release/build/ncdu-output-viewer-dd64a519e80d50f0/out/_ncdu-output-viewer debbuild/usr/share/zsh/site-functions
+	cp -r ../packaging/debbuild/DEBIAN  ../packaging/debbuild/$(DEB_PKG)
+	cp -r ../packaging/debbuild/usr ../packaging/debbuild/$(DEB_PKG)
+	dpkg-deb --build --root-owner-group ../packaging/debbuild/$(DEB_PKG)
+	cp ../packaging/debbuild/*.deb ../dist/
+
+rpm: $(RPM)
+
+deb: $(DEB)
 
 clean-rpm: 
-	rm -rf ../packaging/rpmbuild/BUILD 
-	rm -rf ../packaging/rpmbuild/BUILDROOT
-	rm -rf ../packaging/rpmbuild/RPMS 
-	rm -rf ../packaging/rpmbuild/SRPMS
-	rm -rf ../packaging/rpmbuild/SOURCES
+	rm -rf rpmbuild/BUILD 
+	rm -rf rpmbuild/BUILDROOT
+	rm -rf rpmbuild/RPMS 
+	rm -rf rpmbuild/SRPMS
+	rm -rf rpmbuild/SOURCES
 
-dist: rpm
+clean-deb:
+	rm -rf debbuild/$(DEB_PKG)
+	rm -rf debbuild/$(DEB_PKG).deb
+	rm -rf debbuild/usr
 
-clean: clean-rpm
+dist: rpm deb
+
+clean: clean-rpm clean-deb
 	rm -rf ../dist
