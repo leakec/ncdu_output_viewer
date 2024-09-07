@@ -9,7 +9,7 @@ PUBLIC_JS_FILES = ${subst ts,public/js,$(SRC_JS_FILES)}
 
 package.json: 
 	yarn init -p -y
-	yarn add pg express typescript webpack webpack-cli d3 @types/d3 @types/node@20.0.0
+	yarn add pg express typescript webpack webpack-cli d3 @types/d3 @types/node@20.0.0 d3-scale-chromatic @types/d3-scale-chromatic
 
 db:
 	mkdir -p db

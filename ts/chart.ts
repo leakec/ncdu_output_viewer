@@ -1,5 +1,10 @@
 import * as d3 from "d3";
+import * as d3_colors from 'd3-scale-chromatic';
 
+const color_schemes = Object.keys(d3_colors)
+  .filter(key => key.startsWith('interpolate'))
+  .map(key => key.replace('interpolate', ''));
+  
 class Chart {
     width = 1000;
     height = 750;
@@ -25,6 +30,11 @@ class Chart {
     // @ts-ignore
     num_layers_select: HTMLSelectElement = document.createElement("Select");
     num_layers = 3;
+
+    // For selecting the chart color scheme
+    // @ts-ignore
+    color_scheme_select: HTMLSelectElement = document.createElement("Select");
+    color_scheme = "Rainbow";
 
     // Current plot to draw
     plot: Icicle | Sunburst;
@@ -58,6 +68,7 @@ class Chart {
             this.plot.redraw();
         });
 
+        // For selecting the number of layers
         this.num_layers_select.add(new Option("2", "2"));
         this.num_layers_select.add(new Option("3", "3", true, true));
         this.num_layers_select.add(new Option("4", "4"));
@@ -70,6 +81,20 @@ class Chart {
             });
         });
 
+        // For selecting the color scheme
+        color_schemes.forEach((option) => {
+            if (option == this.color_scheme) {
+                this.color_scheme_select.add(new Option(option, option, true, true));
+            } else {
+                this.color_scheme_select.add(new Option(option, option));
+            }
+        });
+        this.color_scheme_select.addEventListener("change", () => {
+            this.color_scheme = this.color_scheme_select.value;
+            this.plot.redraw();
+        });
+
+        this.container.append(this.color_scheme_select);
         this.container.append(this.chart_type_select);
         this.container.append(this.data_type_select);
         this.container.append(this.num_layers_select);
@@ -97,7 +122,7 @@ class Chart {
 
         // Compute colors based on the data
         this.color = d3.scaleOrdinal(
-            d3.quantize(d3.interpolateRainbow, this.data.children.length + 1),
+            d3.quantize(d3[`interpolate${this.color_scheme}`], this.data.children.length + 1),
         );
     }
 
